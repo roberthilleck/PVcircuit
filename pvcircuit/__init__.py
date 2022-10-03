@@ -21,15 +21,16 @@ This module contains the classes:
     pvc.EQE()        # properties of tandem external quantum efficiency measurements
 """
 
-import os
 import importlib
+import os
+
+import pvcircuit.EY as EY
+import pvcircuit.iv3T as iv3T
 #
 import pvcircuit.junction as junction
 import pvcircuit.multi2T as multi2T
-import pvcircuit.iv3T as iv3T
-import pvcircuit.tandem3T as tandem3T
 import pvcircuit.qe as qe
-import pvcircuit.EY as EY
+import pvcircuit.tandem3T as tandem3T
 
 # expose constructors to package's top level
 Junction = junction.Junction
@@ -56,10 +57,9 @@ TMY = EY.TMY
 VERSION = 0.04
 
 
-
-__author__ = 'John Geisz'
-__email__ = u'john.geisz@nrel.gov'
-__url__ = u'https://github.nrel.gov/jgeisz/PVcircuit'
+__author__ = "John Geisz"
+__email__ = "john.geisz@nrel.gov"
+__url__ = "https://github.nrel.gov/jgeisz/PVcircuit"
 __version__ = VERSION
-__release__ = 'development'
-__all__ = ['junction', 'multi2T', 'iv3T', 'tandem3T', 'qe', 'EY']
+__release__ = "development"
+__all__ = ["junction", "multi2T", "iv3T", "tandem3T", "qe", "EY"]
