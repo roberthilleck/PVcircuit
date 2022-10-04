@@ -583,210 +583,210 @@ class EQE(object):
             # rax.legend(loc=7)
         return ax, rax
 
-    def controls(self, Pspec="global", ispec=0, specname=None, xspec=wvl):
-        """
-        use interactive_output for GUI in IPython
-        """
-        tand_layout = widgets.Layout(width="300px", height="40px")
-        vout_layout = widgets.Layout(width="180px", height="40px")
-        junc_layout = widgets.Layout(display="flex", flex_flow="row", justify_content="space-around")
-        multi_layout = widgets.Layout(display="flex", flex_flow="row", justify_content="space-around")
+    # def controls(self, Pspec="global", ispec=0, specname=None, xspec=wvl):
+    #     """
+    #     use interactive_output for GUI in IPython
+    #     """
+    #     tand_layout = widgets.Layout(width="300px", height="40px")
+    #     vout_layout = widgets.Layout(width="180px", height="40px")
+    #     junc_layout = widgets.Layout(display="flex", flex_flow="row", justify_content="space-around")
+    #     multi_layout = widgets.Layout(display="flex", flex_flow="row", justify_content="space-around")
 
-        replot_types = [
-            widgets.widgets.widget_float.BoundedFloatText,
-            widgets.widgets.widget_int.BoundedIntText,
-            widgets.widgets.widget_int.IntSlider,
-            widgets.widgets.widget_float.FloatSlider,
-            widgets.widgets.widget_float.FloatLogSlider,
-        ]
+    #     replot_types = [
+    #         widgets.widgets.widget_float.BoundedFloatText,
+    #         widgets.widgets.widget_int.BoundedIntText,
+    #         widgets.widgets.widget_int.IntSlider,
+    #         widgets.widgets.widget_float.FloatSlider,
+    #         widgets.widgets.widget_float.FloatLogSlider,
+    #     ]
 
-        def on_EQEchange(change):
-            # function for changing values
-            old = change["old"]  # old value
-            new = change["new"]  # new value
-            owner = change["owner"]  # control
-            value = owner.value
-            desc = owner.description
-            # with self.debugout: print('Mcontrol: ' + desc + '->', value)
-            # self.set(**{desc:value})
+    #     def on_EQEchange(change):
+    #         # function for changing values
+    #         old = change["old"]  # old value
+    #         new = change["new"]  # new value
+    #         owner = change["owner"]  # control
+    #         value = owner.value
+    #         desc = owner.description
+    #         # with self.debugout: print('Mcontrol: ' + desc + '->', value)
+    #         # self.set(**{desc:value})
 
-        def on_EQEreplot(change):
-            # change info
-            fast = True
-            if type(change) is widgets.widgets.widget_button.Button:
-                owner = change
-            else:  # other controls
-                owner = change["owner"]  # control
-                value = owner.value
-            desc = owner.description
-            if desc == "Recalc":
-                fast = False
+    #     def on_EQEreplot(change):
+    #         # change info
+    #         fast = True
+    #         if type(change) is widgets.widgets.widget_button.Button:
+    #             owner = change
+    #         else:  # other controls
+    #             owner = change["owner"]  # control
+    #             value = owner.value
+    #         desc = owner.description
+    #         if desc == "Recalc":
+    #             fast = False
 
-            # recalculate
-            ts = time()
-            if desc[:3] == "eta":
-                junc, dist = parse("eta{:1d}{:1d}", desc)
-                self.LCcorr(junc, dist, value)  # replace one value and recalculate LC
-                specname = None
-            elif desc == "spec":
-                if value in dfrefspec.columns:
-                    specname = value
-                    Pspec = dfrefspec[specname].to_numpy(dtype=np.float64, copy=True)
-            else:
-                VoutBox.clear_output()
-                with VoutBox:
-                    print(desc)
-                return 0
+    #         # recalculate
+    #         ts = time()
+    #         if desc[:3] == "eta":
+    #             junc, dist = parse("eta{:1d}{:1d}", desc)
+    #             self.LCcorr(junc, dist, value)  # replace one value and recalculate LC
+    #             specname = None
+    #         elif desc == "spec":
+    #             if value in dfrefspec.columns:
+    #                 specname = value
+    #                 Pspec = dfrefspec[specname].to_numpy(dtype=np.float64, copy=True)
+    #         else:
+    #             VoutBox.clear_output()
+    #             with VoutBox:
+    #                 print(desc)
+    #             return 0
 
-            with Rout:  # right output device -> light
-                # replot
-                lines = ax.get_lines()
-                for line in lines:
-                    linelabel = line.get_label()
-                    # with self.debugout: print(linelabel)
-                    for i in range(self.njuncs):
-                        if linelabel == self.sjuncs[i]:
-                            line.set_data(self.xEQE, self.corrEQE[:, i])  # replot
+    #         with Rout:  # right output device -> light
+    #             # replot
+    #             lines = ax.get_lines()
+    #             for line in lines:
+    #                 linelabel = line.get_label()
+    #                 # with self.debugout: print(linelabel)
+    #                 for i in range(self.njuncs):
+    #                     if linelabel == self.sjuncs[i]:
+    #                         line.set_data(self.xEQE, self.corrEQE[:, i])  # replot
 
-                rlines = rax.get_lines()
-                for line in rlines:
-                    linelabel = line.get_label()
-                    # with self.debugout: print(linelabel)
-                    if linelabel in refnames:
-                        if specname == None:  # desc == 'spec'
-                            specname = linelabel
-                            Pspec = specname
-                        else:
-                            line.set_data(xspec, Pspec)  # replot spectrum
-                            for obj in rax.get_children():
-                                if type(obj) is mpl.collections.PolyCollection:  # contours
-                                    if obj.get_label() == "fill":
-                                        obj.remove()  # remove old fill
-                            rax.fill_between(xspec, Pspec, step="mid", alpha=0.2, color="grey", label="fill")
-                            line.set(label=specname)  # relabel spectrum
+    #             rlines = rax.get_lines()
+    #             for line in rlines:
+    #                 linelabel = line.get_label()
+    #                 # with self.debugout: print(linelabel)
+    #                 if linelabel in refnames:
+    #                     if specname == None:  # desc == 'spec'
+    #                         specname = linelabel
+    #                         Pspec = specname
+    #                     else:
+    #                         line.set_data(xspec, Pspec)  # replot spectrum
+    #                         for obj in rax.get_children():
+    #                             if type(obj) is mpl.collections.PolyCollection:  # contours
+    #                                 if obj.get_label() == "fill":
+    #                                     obj.remove()  # remove old fill
+    #                         rax.fill_between(xspec, Pspec, step="mid", alpha=0.2, color="grey", label="fill")
+    #                         line.set(label=specname)  # relabel spectrum
 
-            Jscs = self.Jint(Pspec, xspec)
-            Jdbs, Egs = self.Jdb(25)
-            OP = PintMD(Pspec, xspec)
+    #         Jscs = self.Jint(Pspec, xspec)
+    #         Jdbs, Egs = self.Jdb(25)
+    #         OP = PintMD(Pspec, xspec)
 
-            VoutBox.clear_output()
-            with VoutBox:
-                stext = (specname + " {0:6.2f} W/m2").format(OP)
-                print("Eg = ", Egs, " eV")
-                print(stext)
-                print("Jsc = ", Jscs[0], " mA/cm2")
+    #         VoutBox.clear_output()
+    #         with VoutBox:
+    #             stext = (specname + " {0:6.2f} W/m2").format(OP)
+    #             print("Eg = ", Egs, " eV")
+    #             print(stext)
+    #             print("Jsc = ", Jscs[0], " mA/cm2")
 
-            te = time()
-            dt = te - ts
-            with VoutBox:
-                print("Calc Time: {0:>6.2f} s".format(dt))
+    #         te = time()
+    #         dt = te - ts
+    #         with VoutBox:
+    #             print("Calc Time: {0:>6.2f} s".format(dt))
 
-        # summary line
-        VoutBox = widgets.Output()
-        VoutBox.layout.height = "70px"
-        # with VoutBox: print('Summary')
+    #     # summary line
+    #     VoutBox = widgets.Output()
+    #     VoutBox.layout.height = "70px"
+    #     # with VoutBox: print('Summary')
 
-        # Right output -> EQE plot
-        Rout = widgets.Output()
-        with Rout:  # output device
-            if plt.isinteractive:
-                plt.ioff()
-                restart = True
-            else:
-                restart = False
-            ax, rax = self.plot(Pspec, ispec, specname, xspec)
-            fig = ax.get_figure()
-            fig.show()
-            rlines = rax.get_lines()
-            for line in rlines:
-                linelabel = line.get_label()
-                if linelabel in refnames:
-                    specname = linelabel
-            if restart:
-                plt.ion()
+    #     # Right output -> EQE plot
+    #     Rout = widgets.Output()
+    #     with Rout:  # output device
+    #         if plt.isinteractive:
+    #             plt.ioff()
+    #             restart = True
+    #         else:
+    #             restart = False
+    #         ax, rax = self.plot(Pspec, ispec, specname, xspec)
+    #         fig = ax.get_figure()
+    #         fig.show()
+    #         rlines = rax.get_lines()
+    #         for line in rlines:
+    #             linelabel = line.get_label()
+    #             if linelabel in refnames:
+    #                 specname = linelabel
+    #         if restart:
+    #             plt.ion()
 
-        # tandem3T controls
-        in_tit = widgets.Label(value="EQE: ", description="title")
-        in_name = widgets.Text(value=self.name, description="name", layout=tand_layout, continuous_update=False)
-        in_name.observe(on_EQEchange, names="value")  # update values
+    #     # tandem3T controls
+    #     in_tit = widgets.Label(value="EQE: ", description="title")
+    #     in_name = widgets.Text(value=self.name, description="name", layout=tand_layout, continuous_update=False)
+    #     in_name.observe(on_EQEchange, names="value")  # update values
 
-        in_spec = widgets.Dropdown(value=specname, description="spec", layout=tand_layout, options=refnames)
-        in_spec.observe(on_EQEreplot, names="value")  # update values
+    #     in_spec = widgets.Dropdown(value=specname, description="spec", layout=tand_layout, options=refnames)
+    #     in_spec.observe(on_EQEreplot, names="value")  # update values
 
-        Hui = widgets.HBox([in_tit, in_name, in_spec])
-        # in_Rs2T.observe(on_2Tchange,names='value') #update values
+    #     Hui = widgets.HBox([in_tit, in_name, in_spec])
+    #     # in_Rs2T.observe(on_2Tchange,names='value') #update values
 
-        in_eta = []
-        elist0 = []
-        elist1 = []
-        elist2 = []
-        # list of eta controls
-        for i in range(self.njuncs):
-            if i > 0:
-                in_eta.append(
-                    widgets.FloatSlider(
-                        value=self.etas[i, 0],
-                        min=-0.2,
-                        max=1.5,
-                        step=0.001,
-                        description="eta" + str(i) + "0",
-                        layout=junc_layout,
-                        readout_format=".4f",
-                    )
-                )
-                j = len(in_eta) - 1
-                elist0.append(in_eta[j])
-                in_eta[j].observe(on_EQEreplot, names="value")  # replot
-                # if i > 1:
-                in_eta.append(
-                    widgets.FloatSlider(
-                        value=self.etas[i, 1],
-                        min=-0.2,
-                        max=1.5,
-                        step=0.001,
-                        description="eta" + str(i) + "1",
-                        layout=junc_layout,
-                        readout_format=".4f",
-                    )
-                )
-                j = len(in_eta) - 1
-                elist1.append(in_eta[j])
-                in_eta[j].observe(on_EQEreplot, names="value")  # replot
-                if i > 1:
-                    in_eta[j].observe(on_EQEreplot, names="value")  # replot
-                else:
-                    in_eta[j].disabled = True
-                # if i > 2:
-                in_eta.append(
-                    widgets.FloatSlider(
-                        value=self.etas[i, 2],
-                        min=-0.2,
-                        max=1.5,
-                        step=0.001,
-                        description="eta" + str(i) + "2",
-                        layout=junc_layout,
-                        readout_format=".4f",
-                    )
-                )
-                j = len(in_eta) - 1
-                elist2.append(in_eta[j])
-                if i > 2:
-                    in_eta[j].observe(on_EQEreplot, names="value")  # replot
-                else:
-                    in_eta[j].disabled = True
-        etaui0 = widgets.HBox(elist0)
-        etaui1 = widgets.HBox(elist1)
-        etaui2 = widgets.HBox(elist2)
+    #     in_eta = []
+    #     elist0 = []
+    #     elist1 = []
+    #     elist2 = []
+    #     # list of eta controls
+    #     for i in range(self.njuncs):
+    #         if i > 0:
+    #             in_eta.append(
+    #                 widgets.FloatSlider(
+    #                     value=self.etas[i, 0],
+    #                     min=-0.2,
+    #                     max=1.5,
+    #                     step=0.001,
+    #                     description="eta" + str(i) + "0",
+    #                     layout=junc_layout,
+    #                     readout_format=".4f",
+    #                 )
+    #             )
+    #             j = len(in_eta) - 1
+    #             elist0.append(in_eta[j])
+    #             in_eta[j].observe(on_EQEreplot, names="value")  # replot
+    #             # if i > 1:
+    #             in_eta.append(
+    #                 widgets.FloatSlider(
+    #                     value=self.etas[i, 1],
+    #                     min=-0.2,
+    #                     max=1.5,
+    #                     step=0.001,
+    #                     description="eta" + str(i) + "1",
+    #                     layout=junc_layout,
+    #                     readout_format=".4f",
+    #                 )
+    #             )
+    #             j = len(in_eta) - 1
+    #             elist1.append(in_eta[j])
+    #             in_eta[j].observe(on_EQEreplot, names="value")  # replot
+    #             if i > 1:
+    #                 in_eta[j].observe(on_EQEreplot, names="value")  # replot
+    #             else:
+    #                 in_eta[j].disabled = True
+    #             # if i > 2:
+    #             in_eta.append(
+    #                 widgets.FloatSlider(
+    #                     value=self.etas[i, 2],
+    #                     min=-0.2,
+    #                     max=1.5,
+    #                     step=0.001,
+    #                     description="eta" + str(i) + "2",
+    #                     layout=junc_layout,
+    #                     readout_format=".4f",
+    #                 )
+    #             )
+    #             j = len(in_eta) - 1
+    #             elist2.append(in_eta[j])
+    #             if i > 2:
+    #                 in_eta[j].observe(on_EQEreplot, names="value")  # replot
+    #             else:
+    #                 in_eta[j].disabled = True
+    #     etaui0 = widgets.HBox(elist0)
+    #     etaui1 = widgets.HBox(elist1)
+    #     etaui2 = widgets.HBox(elist2)
 
-        # in_Rs2T.observe(on_2Treplot,names='value')  #replot
-        # in_2Tbut.on_click(on_2Treplot)  #replot
+    #     # in_Rs2T.observe(on_2Treplot,names='value')  #replot
+    #     # in_2Tbut.on_click(on_2Treplot)  #replot
 
-        # EQE_ui = widgets.HBox(clist)
-        # eta_ui = widgets.HBox(jui)
+    #     # EQE_ui = widgets.HBox(clist)
+    #     # eta_ui = widgets.HBox(jui)
 
-        ui = widgets.VBox([Rout, VoutBox, Hui, etaui0, etaui1, etaui2])
-        self.ui = ui
-        # in_2Tbut.click() #fill in MPP values
+    #     ui = widgets.VBox([Rout, VoutBox, Hui, etaui0, etaui1, etaui2])
+    #     self.ui = ui
+    #     # in_2Tbut.click() #fill in MPP values
 
-        # return entire user interface, dark and light graph axes for tweaking
-        return ui, ax, rax
+    #     # return entire user interface, dark and light graph axes for tweaking
+    #     return ui, ax, rax

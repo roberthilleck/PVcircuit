@@ -883,597 +883,597 @@ class Tandem3T(object):
 
         return sp
 
-    def controls(
-        self,
-        Vdata3T=None,
-        Idata3T=None,
-        darkData3T=None,
-        hex=False,
-        meastype="CZ",
-        size="x-large",
-        Iargs={"xkey": "IA", "ykey": "IB", "zkey": "Ptot", "density": True},
-        Vargs={"xkey": "VA", "ykey": "VB", "zkey": "Ptot", "density": True},
-    ):
-        """
-        use interactive_output for GUI in IPython
-        Iargs = {'xkey':'VA', 'ykey':'VB', 'zkey':'IB', 'log':True}
-        Vargs = {'xkey':'VA', 'ykey':'VB', 'zkey':'IA', 'log':True}
+    # def controls(
+    #     self,
+    #     Vdata3T=None,
+    #     Idata3T=None,
+    #     darkData3T=None,
+    #     hex=False,
+    #     meastype="CZ",
+    #     size="x-large",
+    #     Iargs={"xkey": "IA", "ykey": "IB", "zkey": "Ptot", "density": True},
+    #     Vargs={"xkey": "VA", "ykey": "VB", "zkey": "Ptot", "density": True},
+    # ):
+    #     """
+    #     use interactive_output for GUI in IPython
+    #     Iargs = {'xkey':'VA', 'ykey':'VB', 'zkey':'IB', 'log':True}
+    #     Vargs = {'xkey':'VA', 'ykey':'VB', 'zkey':'IA', 'log':True}
 
-        """
-        tand_layout = widgets.Layout(width="300px", height="40px")
-        vout_layout = widgets.Layout(width="180px", height="40px")
-        grid_layout = widgets.Layout(grid_template_columns="repeat(2, 180px)", grid_template_rows="repeat(3, 30px)", height="100px")
-        junc_layout = widgets.Layout(display="flex", flex_flow="row", justify_content="space-around")
-        replot_types = [
-            widgets.widgets.widget_float.BoundedFloatText,
-            widgets.widgets.widget_int.BoundedIntText,
-            widgets.widgets.widget_int.IntSlider,
-            widgets.widgets.widget_float.FloatSlider,
-            widgets.widgets.widget_float.FloatLogSlider,
-        ]
-        scale = 1000.0
-        pnts = 71
-        pltargs = {
-            "lw": 0,
-            "ms": 7,
-            "mew": 1,
-            "mec": "black",
-            "mfc": "white",
-            "marker": "o",
-            "c": "red",
-            "label": "fitsp",
-            "zorder": 5,
-        }
-        dsun = [1e-9, 1e-10]  # dark suns
-        dpnts = 21
-        dlo = -14
-        dhi = 2
+    #     """
+    #     tand_layout = widgets.Layout(width="300px", height="40px")
+    #     vout_layout = widgets.Layout(width="180px", height="40px")
+    #     grid_layout = widgets.Layout(grid_template_columns="repeat(2, 180px)", grid_template_rows="repeat(3, 30px)", height="100px")
+    #     junc_layout = widgets.Layout(display="flex", flex_flow="row", justify_content="space-around")
+    #     replot_types = [
+    #         widgets.widgets.widget_float.BoundedFloatText,
+    #         widgets.widgets.widget_int.BoundedIntText,
+    #         widgets.widgets.widget_int.IntSlider,
+    #         widgets.widgets.widget_float.FloatSlider,
+    #         widgets.widgets.widget_float.FloatLogSlider,
+    #     ]
+    #     scale = 1000.0
+    #     pnts = 71
+    #     pltargs = {
+    #         "lw": 0,
+    #         "ms": 7,
+    #         "mew": 1,
+    #         "mec": "black",
+    #         "mfc": "white",
+    #         "marker": "o",
+    #         "c": "red",
+    #         "label": "fitsp",
+    #         "zorder": 5,
+    #     }
+    #     dsun = [1e-9, 1e-10]  # dark suns
+    #     dpnts = 21
+    #     dlo = -14
+    #     dhi = 2
 
-        def on_3Tchange(change):
-            # function for changing values
-            old = change["old"]  # old value
-            new = change["new"]  # new value
-            owner = change["owner"]  # control
-            value = owner.value
-            desc = owner.description
-            with self.debugout:
-                print("Tcontrol: " + desc + "->", value)
-            self.set(**{desc: value})
+    #     def on_3Tchange(change):
+    #         # function for changing values
+    #         old = change["old"]  # old value
+    #         new = change["new"]  # new value
+    #         owner = change["owner"]  # control
+    #         value = owner.value
+    #         desc = owner.description
+    #         with self.debugout:
+    #             print("Tcontrol: " + desc + "->", value)
+    #         self.set(**{desc: value})
 
-        def on_3Treplot(change):
-            # change info
-            fast = False
-            Vcalc = False
-            Icalc = False
-            Dcalc = False
-            if type(change) is widgets.widgets.widget_button.Button:
-                owner = change
-                desc = owner.description
-            else:  # other controls
-                owner = change["owner"]  # control
-            desc = owner.description
-            if desc == "All":
-                Vcalc = True
-                Icalc = True
-                Dcalc = True
-            elif desc == "P(I)":
-                Vcalc = True
-            elif desc == "P(V)":
-                Icalc = True
-            elif desc == "dark":
-                Dcalc = True
-            elif desc == "MPPcalc":
-                fast = False
-            elif desc == "savefig":
-                fast = True
-            else:
-                fast = True
+    #     def on_3Treplot(change):
+    #         # change info
+    #         fast = False
+    #         Vcalc = False
+    #         Icalc = False
+    #         Dcalc = False
+    #         if type(change) is widgets.widgets.widget_button.Button:
+    #             owner = change
+    #             desc = owner.description
+    #         else:  # other controls
+    #             owner = change["owner"]  # control
+    #         desc = owner.description
+    #         if desc == "All":
+    #             Vcalc = True
+    #             Icalc = True
+    #             Dcalc = True
+    #         elif desc == "P(I)":
+    #             Vcalc = True
+    #         elif desc == "P(V)":
+    #             Icalc = True
+    #         elif desc == "dark":
+    #             Dcalc = True
+    #         elif desc == "MPPcalc":
+    #             fast = False
+    #         elif desc == "savefig":
+    #             fast = True
+    #         else:
+    #             fast = True
 
-            with self.debugout:
-                print(desc, self)
-            # recalculate
-            ts = time()
-            fitsp = self.specialpoints(meastype=meastype, fast=fast)
-            if Iargs["density"] == True:
-                fscale = 1000.0 / fitsp.area
-            else:
-                fscale = 1000.0
-            # summary line
-            fmtstr = "Fit:  (Vzt = {0:>5.3f}, Vrz = {1:>5.3f}, Vtr = {2:>5.3f} V),   "
-            if Iargs["density"] == True:
-                fmtstr += "(Jro = {3:>5.2f}, Jzo = {4:>5.2f}, Jto = {5:>5.2f} mA/mA)"
-            else:
-                fmtstr += "(Iro = {3:>5.2f}, Izo = {4:>5.2f}, Ito = {5:>5.2f} mA)"
+    #         with self.debugout:
+    #             print(desc, self)
+    #         # recalculate
+    #         ts = time()
+    #         fitsp = self.specialpoints(meastype=meastype, fast=fast)
+    #         if Iargs["density"] == True:
+    #             fscale = 1000.0 / fitsp.area
+    #         else:
+    #             fscale = 1000.0
+    #         # summary line
+    #         fmtstr = "Fit:  (Vzt = {0:>5.3f}, Vrz = {1:>5.3f}, Vtr = {2:>5.3f} V),   "
+    #         if Iargs["density"] == True:
+    #             fmtstr += "(Jro = {3:>5.2f}, Jzo = {4:>5.2f}, Jto = {5:>5.2f} mA/mA)"
+    #         else:
+    #             fmtstr += "(Iro = {3:>5.2f}, Izo = {4:>5.2f}, Ito = {5:>5.2f} mA)"
 
-            VoutBox.clear_output()
-            if VdataMPP:
-                outstr = (fmtstr + ",   Pmp = {6:>5.2f} mW/cm2").format(
-                    VdataMPP.Vzt[0],
-                    VdataMPP.Vrz[0],
-                    VdataMPP.Vtr[0],
-                    VdataMPP.Iro[0] * fscale,
-                    VdataMPP.Izo[0] * fscale,
-                    VdataMPP.Ito[0] * fscale,
-                    VdataMPP.Ptot[0] * fscale,
-                )
-                with VoutBox:
-                    print(outstr.replace("Fit:", "VData:"))
+    #         VoutBox.clear_output()
+    #         if VdataMPP:
+    #             outstr = (fmtstr + ",   Pmp = {6:>5.2f} mW/cm2").format(
+    #                 VdataMPP.Vzt[0],
+    #                 VdataMPP.Vrz[0],
+    #                 VdataMPP.Vtr[0],
+    #                 VdataMPP.Iro[0] * fscale,
+    #                 VdataMPP.Izo[0] * fscale,
+    #                 VdataMPP.Ito[0] * fscale,
+    #                 VdataMPP.Ptot[0] * fscale,
+    #             )
+    #             with VoutBox:
+    #                 print(outstr.replace("Fit:", "VData:"))
 
-            elif IdataMPP:
-                outstr = (fmtstr + ",   Pmp = {6:>5.2f} mW/cm2").format(
-                    IdataMPP.Vzt[0],
-                    IdataMPP.Vrz[0],
-                    IdataMPP.Vtr[0],
-                    IdataMPP.Iro[0] * fscale,
-                    IdataMPP.Izo[0] * fscale,
-                    IdataMPP.Ito[0] * fscale,
-                    IdataMPP.Ptot[0] * fscale,
-                )
-                with VoutBox:
-                    print(outstr.replace("Fit:", "IData:"))
+    #         elif IdataMPP:
+    #             outstr = (fmtstr + ",   Pmp = {6:>5.2f} mW/cm2").format(
+    #                 IdataMPP.Vzt[0],
+    #                 IdataMPP.Vrz[0],
+    #                 IdataMPP.Vtr[0],
+    #                 IdataMPP.Iro[0] * fscale,
+    #                 IdataMPP.Izo[0] * fscale,
+    #                 IdataMPP.Ito[0] * fscale,
+    #                 IdataMPP.Ptot[0] * fscale,
+    #             )
+    #             with VoutBox:
+    #                 print(outstr.replace("Fit:", "IData:"))
 
-            if "MPP" in fitsp.names:  # not fast
-                ii = fitsp.names.index("MPP")  # index of MPP from sp
-                fmtstr += ",   Pmp = {6:>5.2f} mW/cm2"
-                outstr = fmtstr.format(
-                    fitsp.Vzt[0],
-                    fitsp.Vrz[0],
-                    fitsp.Vtr[0],
-                    fitsp.Iro[1] * fscale,
-                    fitsp.Izo[1] * fscale,
-                    fitsp.Ito[1] * fscale,
-                    fitsp.Ptot[ii] * fscale,
-                )
-                with VoutBox:
-                    print(outstr.replace("fit", "data"))
-            else:
-                outstr = fmtstr.format(
-                    fitsp.Vzt[0], fitsp.Vrz[0], fitsp.Vtr[0], fitsp.Iro[1] * fscale, fitsp.Izo[1] * fscale, fitsp.Ito[1] * fscale
-                )
-                with VoutBox:
-                    print(outstr.replace("fit", "data"))
+    #         if "MPP" in fitsp.names:  # not fast
+    #             ii = fitsp.names.index("MPP")  # index of MPP from sp
+    #             fmtstr += ",   Pmp = {6:>5.2f} mW/cm2"
+    #             outstr = fmtstr.format(
+    #                 fitsp.Vzt[0],
+    #                 fitsp.Vrz[0],
+    #                 fitsp.Vtr[0],
+    #                 fitsp.Iro[1] * fscale,
+    #                 fitsp.Izo[1] * fscale,
+    #                 fitsp.Ito[1] * fscale,
+    #                 fitsp.Ptot[ii] * fscale,
+    #             )
+    #             with VoutBox:
+    #                 print(outstr.replace("fit", "data"))
+    #         else:
+    #             outstr = fmtstr.format(
+    #                 fitsp.Vzt[0], fitsp.Vrz[0], fitsp.Vtr[0], fitsp.Iro[1] * fscale, fitsp.Izo[1] * fscale, fitsp.Ito[1] * fscale
+    #             )
+    #             with VoutBox:
+    #                 print(outstr.replace("fit", "data"))
 
-            tmp = time()
+    #         tmp = time()
 
-            # with Rout: # right output device -> P(I) typically
-            # replot: Iax with Rout
-            lines = Iax.get_lines()
-            for line in lines:
-                linelabel = line.get_label()
-                if linelabel == "fitsp":
-                    xp = getattr(fitsp, Iargs["xkey"]) * Iscale
-                    yp = getattr(fitsp, Iargs["ykey"]) * Iscale
-                    line.set_data(xp, yp)
-            if Vcalc:
-                if RVorI == "I":
-                    self.V3T(Ifit3T)
-                else:
-                    self.I3Trel(Ifit3T)  # slow
-                # self.V3T(Ifit3T)
-                for i, obj in enumerate(Iobjs):
-                    if type(obj) is mpl.contour.QuadContourSet:  # contours
-                        if obj.colors == "red":  # identify fit contour
-                            fitcont = Iobjs.pop(i)  # remove it
-                            for coll in fitcont.collections:
-                                if coll in Iax.collections:
-                                    Iax.collections.remove(coll)  # remove old contour lines from plot
-                            for text in fitcont.labelTexts:
-                                if text in Iax.texts:
-                                    Iax.texts.remove(text)  # remove old contour labels from plot
-                            break
+    #         # with Rout: # right output device -> P(I) typically
+    #         # replot: Iax with Rout
+    #         lines = Iax.get_lines()
+    #         for line in lines:
+    #             linelabel = line.get_label()
+    #             if linelabel == "fitsp":
+    #                 xp = getattr(fitsp, Iargs["xkey"]) * Iscale
+    #                 yp = getattr(fitsp, Iargs["ykey"]) * Iscale
+    #                 line.set_data(xp, yp)
+    #         if Vcalc:
+    #             if RVorI == "I":
+    #                 self.V3T(Ifit3T)
+    #             else:
+    #                 self.I3Trel(Ifit3T)  # slow
+    #             # self.V3T(Ifit3T)
+    #             for i, obj in enumerate(Iobjs):
+    #                 if type(obj) is mpl.contour.QuadContourSet:  # contours
+    #                     if obj.colors == "red":  # identify fit contour
+    #                         fitcont = Iobjs.pop(i)  # remove it
+    #                         for coll in fitcont.collections:
+    #                             if coll in Iax.collections:
+    #                                 Iax.collections.remove(coll)  # remove old contour lines from plot
+    #                         for text in fitcont.labelTexts:
+    #                             if text in Iax.texts:
+    #                                 Iax.texts.remove(text)  # remove old contour labels from plot
+    #                         break
 
-                with Rout:
-                    Ifit3T.plot(inplot=(Iax, Iobjs), cmap=None, ccont="red", **Iargs)  # replot fit contour
+    #             with Rout:
+    #                 Ifit3T.plot(inplot=(Iax, Iobjs), cmap=None, ccont="red", **Iargs)  # replot fit contour
 
-            tI = time()
+    #         tI = time()
 
-            # with Lout: # left output device -> P(V) typically
-            # replot: Vax with Lout
-            lines = Vax.get_lines()
-            for line in lines:
-                linelabel = line.get_label()
-                if linelabel == "fitsp":
-                    xp = getattr(fitsp, Vargs["xkey"]) * Vscale
-                    yp = getattr(fitsp, Vargs["ykey"]) * Vscale
-                    line.set_data(xp, yp)
-            if Icalc:
-                if LVorI == "I":
-                    self.V3T(Vfit3T)
-                else:
-                    self.I3Trel(Vfit3T)  # slow
-                # self.I3Trel(Vfit3T)    #slow
-                for i, obj in enumerate(Vobjs):
-                    if type(obj) is mpl.contour.QuadContourSet:  # contours
-                        if obj.colors == "red":  # identify fit contour
-                            fitcont = Vobjs.pop(i)  # remove it
-                            for coll in fitcont.collections:
-                                if coll in Vax.collections:
-                                    Vax.collections.remove(coll)  # remove old contour lines from plot
-                            for text in fitcont.labelTexts:
-                                if text in Vax.texts:
-                                    Vax.texts.remove(text)  # remove old contour labels from plot
-                            break
+    #         # with Lout: # left output device -> P(V) typically
+    #         # replot: Vax with Lout
+    #         lines = Vax.get_lines()
+    #         for line in lines:
+    #             linelabel = line.get_label()
+    #             if linelabel == "fitsp":
+    #                 xp = getattr(fitsp, Vargs["xkey"]) * Vscale
+    #                 yp = getattr(fitsp, Vargs["ykey"]) * Vscale
+    #                 line.set_data(xp, yp)
+    #         if Icalc:
+    #             if LVorI == "I":
+    #                 self.V3T(Vfit3T)
+    #             else:
+    #                 self.I3Trel(Vfit3T)  # slow
+    #             # self.I3Trel(Vfit3T)    #slow
+    #             for i, obj in enumerate(Vobjs):
+    #                 if type(obj) is mpl.contour.QuadContourSet:  # contours
+    #                     if obj.colors == "red":  # identify fit contour
+    #                         fitcont = Vobjs.pop(i)  # remove it
+    #                         for coll in fitcont.collections:
+    #                             if coll in Vax.collections:
+    #                                 Vax.collections.remove(coll)  # remove old contour lines from plot
+    #                         for text in fitcont.labelTexts:
+    #                             if text in Vax.texts:
+    #                                 Vax.texts.remove(text)  # remove old contour labels from plot
+    #                         break
 
-                with Lout:
-                    Vfit3T.plot(inplot=(Vax, Vobjs), cmap=None, ccont="red", **Vargs)  # replot fit contour
+    #             with Lout:
+    #                 Vfit3T.plot(inplot=(Vax, Vobjs), cmap=None, ccont="red", **Vargs)  # replot fit contour
 
-            tV = time()
+    #         tV = time()
 
-            # replot: dark Lax, Rax
-            if darkFit3T:  # add new dark fit
-                # dark plots
-                Jtop = self.top.Jext  # remember light
-                Jbot = self.bot.Jext
-                self.top.Jext = Jtop * dsun[0]  # make dark
-                self.bot.Jext = Jbot * dsun[1]
+    #         # replot: dark Lax, Rax
+    #         if darkFit3T:  # add new dark fit
+    #             # dark plots
+    #             Jtop = self.top.Jext  # remember light
+    #             Jbot = self.bot.Jext
+    #             self.top.Jext = Jtop * dsun[0]  # make dark
+    #             self.bot.Jext = Jbot * dsun[1]
 
-                lines = Lax.get_lines() + Rax.get_lines()
-                for line in lines:
-                    linelabel = line.get_label()
-                    if linelabel == "_dlntop":
-                        self.V3T(dlntop)  # fast
-                        line.set_data(dlntop.VB, abs(dlntop.IB) * scale)
-                        # Lax.plot(dlntop.VB, abs(dlntop.IB)*scale, c='black',marker='.',label='_dlntop')
-                    elif linelabel == "_dlnbot":
-                        self.V3T(dlnbot)  # fast
-                        line.set_data(dlnbot.VA, abs(dlnbot.IA) * scale)
-                        # Rax.plot(dlnbot.VA, abs(dlnbot.IA)*scale, c='black',marker='.',label='_dlnbot')
-                    elif linelabel.startswith("_fit"):
-                        if Dcalc:
-                            line.remove()  # remove all the fit lines
-                if Dcalc:  # replace all coupled dark IV lines
-                    self.I3Trel(darkFit3T)
-                    darkFit3T.plotIVslice(step=2, log=True, inplots=(Lax, Rax), labelplus="_fit")
+    #             lines = Lax.get_lines() + Rax.get_lines()
+    #             for line in lines:
+    #                 linelabel = line.get_label()
+    #                 if linelabel == "_dlntop":
+    #                     self.V3T(dlntop)  # fast
+    #                     line.set_data(dlntop.VB, abs(dlntop.IB) * scale)
+    #                     # Lax.plot(dlntop.VB, abs(dlntop.IB)*scale, c='black',marker='.',label='_dlntop')
+    #                 elif linelabel == "_dlnbot":
+    #                     self.V3T(dlnbot)  # fast
+    #                     line.set_data(dlnbot.VA, abs(dlnbot.IA) * scale)
+    #                     # Rax.plot(dlnbot.VA, abs(dlnbot.IA)*scale, c='black',marker='.',label='_dlnbot')
+    #                 elif linelabel.startswith("_fit"):
+    #                     if Dcalc:
+    #                         line.remove()  # remove all the fit lines
+    #             if Dcalc:  # replace all coupled dark IV lines
+    #                 self.I3Trel(darkFit3T)
+    #                 darkFit3T.plotIVslice(step=2, log=True, inplots=(Lax, Rax), labelplus="_fit")
 
-                self.top.Jext = Jtop  # make light again
-                self.bot.Jext = Jbot
+    #             self.top.Jext = Jtop  # make light again
+    #             self.bot.Jext = Jbot
 
-            tD = time()
+    #         tD = time()
 
-            if desc == "savefig":
-                outpath = junction.newoutpath(self.name)
-                strout = str(self)
-                with open(os.path.join(outpath, self.name + ".txt"), "wt") as fout:
-                    fout.write(strout)
+    #         if desc == "savefig":
+    #             outpath = junction.newoutpath(self.name)
+    #             strout = str(self)
+    #             with open(os.path.join(outpath, self.name + ".txt"), "wt") as fout:
+    #                 fout.write(strout)
 
-                # save mathplotlib graphs
-                Vax.get_figure().savefig(os.path.join(outpath, "Vax.png"))
-                Iax.get_figure().savefig(os.path.join(outpath, "Iax.png"))
-                Lax.get_figure().savefig(os.path.join(outpath, "Lax.png"))
-                Rax.get_figure().savefig(os.path.join(outpath, "Rax.png"))
-                with VoutBox:
-                    print(
-                        "points{0:>6.2f}; P(I){1:>6.2f}; P(V){2:>6.2f}; dark{3:>6.2f} s".format(
-                            (tmp - ts), (tI - tmp), (tV - tI), (tD - tV)
-                        ),
-                        "saved: " + outpath,
-                    )
-            else:
-                with VoutBox:
-                    print(
-                        "points{0:>6.2f}; P(I){1:>6.2f}; P(V){2:>6.2f}; dark{3:>6.2f} s".format(
-                            (tmp - ts), (tI - tmp), (tV - tI), (tD - tV)
-                        )
-                    )
+    #             # save mathplotlib graphs
+    #             Vax.get_figure().savefig(os.path.join(outpath, "Vax.png"))
+    #             Iax.get_figure().savefig(os.path.join(outpath, "Iax.png"))
+    #             Lax.get_figure().savefig(os.path.join(outpath, "Lax.png"))
+    #             Rax.get_figure().savefig(os.path.join(outpath, "Rax.png"))
+    #             with VoutBox:
+    #                 print(
+    #                     "points{0:>6.2f}; P(I){1:>6.2f}; P(V){2:>6.2f}; dark{3:>6.2f} s".format(
+    #                         (tmp - ts), (tI - tmp), (tV - tI), (tD - tV)
+    #                     ),
+    #                     "saved: " + outpath,
+    #                 )
+    #         else:
+    #             with VoutBox:
+    #                 print(
+    #                     "points{0:>6.2f}; P(I){1:>6.2f}; P(V){2:>6.2f}; dark{3:>6.2f} s".format(
+    #                         (tmp - ts), (tI - tmp), (tV - tI), (tD - tV)
+    #                     )
+    #                 )
 
-        # Tandem 3T controls
-        in_tit = widgets.Label(value="Tandem3T: ", description="title")
-        in_name = widgets.Text(value=self.name, description="name", tooltip="name of Tandem3T model", layout=tand_layout)
-        in_Rz = widgets.FloatLogSlider(
-            value=self.Rz,
-            base=10,
-            min=-6,
-            max=3,
-            step=0.01,
-            description="Rz",
-            layout=tand_layout,
-            readout_format=".2e",
-            tooltip="resistance of Z contact",
-        )
-        in_savefig = widgets.Button(description="savefig", button_style="success", tooltip="save figures")
-        in_3Tbut = widgets.Button(description="All", button_style="success", tooltip="slowest calculations")
-        in_Dbut = widgets.Button(description="dark", button_style="success", tooltip="slow calculations")
-        in_Ibut = widgets.Button(description="P(V)", button_style="success", tooltip="slow calculations")
-        in_Vbut = widgets.Button(description="P(I)", button_style="success", tooltip="moderately fast calculations")
-        in_Mbut = widgets.Button(description="MPPcalc", button_style="success", tooltip="fairly quick calculations")
-        tand_dict = {"name": in_name, "Rz": in_Rz}
-        # tandout = widgets.interactive_output(self.set, tand_dict)
-        tand_ui = widgets.HBox([in_tit, in_name, in_Rz, in_Mbut, in_Vbut, in_Ibut, in_Dbut, in_3Tbut, in_savefig])
+    #     # Tandem 3T controls
+    #     in_tit = widgets.Label(value="Tandem3T: ", description="title")
+    #     in_name = widgets.Text(value=self.name, description="name", tooltip="name of Tandem3T model", layout=tand_layout)
+    #     in_Rz = widgets.FloatLogSlider(
+    #         value=self.Rz,
+    #         base=10,
+    #         min=-6,
+    #         max=3,
+    #         step=0.01,
+    #         description="Rz",
+    #         layout=tand_layout,
+    #         readout_format=".2e",
+    #         tooltip="resistance of Z contact",
+    #     )
+    #     in_savefig = widgets.Button(description="savefig", button_style="success", tooltip="save figures")
+    #     in_3Tbut = widgets.Button(description="All", button_style="success", tooltip="slowest calculations")
+    #     in_Dbut = widgets.Button(description="dark", button_style="success", tooltip="slow calculations")
+    #     in_Ibut = widgets.Button(description="P(V)", button_style="success", tooltip="slow calculations")
+    #     in_Vbut = widgets.Button(description="P(I)", button_style="success", tooltip="moderately fast calculations")
+    #     in_Mbut = widgets.Button(description="MPPcalc", button_style="success", tooltip="fairly quick calculations")
+    #     tand_dict = {"name": in_name, "Rz": in_Rz}
+    #     # tandout = widgets.interactive_output(self.set, tand_dict)
+    #     tand_ui = widgets.HBox([in_tit, in_name, in_Rz, in_Mbut, in_Vbut, in_Ibut, in_Dbut, in_3Tbut, in_savefig])
 
-        if Vdata3T:
-            meastype = Vdata3T.meastype
-        elif Idata3T:
-            meastype = Idata3T.meastype
+    #     if Vdata3T:
+    #         meastype = Vdata3T.meastype
+    #     elif Idata3T:
+    #         meastype = Idata3T.meastype
 
-        fitsp = self.specialpoints(meastype=meastype)
-        Vmax = max(abs(fitsp.Vzt[0]), abs(fitsp.Vrz[0]), abs(fitsp.Vtr[0])) * 2.0
-        Imax = max(abs(fitsp.Iro[1]), abs(fitsp.Izo[1]), abs(fitsp.Ito[1])) * 2.0
+    #     fitsp = self.specialpoints(meastype=meastype)
+    #     Vmax = max(abs(fitsp.Vzt[0]), abs(fitsp.Vrz[0]), abs(fitsp.Vtr[0])) * 2.0
+    #     Imax = max(abs(fitsp.Iro[1]), abs(fitsp.Izo[1]), abs(fitsp.Ito[1])) * 2.0
 
-        # summary line
-        VoutBox = widgets.Output()
-        VoutBox.layout.height = "60px"
-        with VoutBox:
-            print("Summary")
+    #     # summary line
+    #     VoutBox = widgets.Output()
+    #     VoutBox.layout.height = "60px"
+    #     with VoutBox:
+    #         print("Summary")
 
-        if plt.isinteractive:
-            plt.ioff()
-            restart = True
-        else:
-            restart = False
+    #     if plt.isinteractive:
+    #         plt.ioff()
+    #         restart = True
+    #     else:
+    #         restart = False
 
-        # graphical outputs
-        Rout = widgets.Output()
-        Lout = widgets.Output()
-        ToutBox = widgets.HBox([Lout, Rout], layout=junc_layout)
+    #     # graphical outputs
+    #     Rout = widgets.Output()
+    #     Lout = widgets.Output()
+    #     ToutBox = widgets.HBox([Lout, Rout], layout=junc_layout)
 
-        with self.debugout:
-            print(self)
+    #     with self.debugout:
+    #         print(self)
 
-        ######## initial plots: Idata and Ifit ##########
-        RVorI = Iargs["xkey"][0]  #'V' or 'I'
+    #     ######## initial plots: Idata and Ifit ##########
+    #     RVorI = Iargs["xkey"][0]  #'V' or 'I'
 
-        if Idata3T:
-            Ifit3T = Idata3T.copy()
-            Ifit3T.set(name=self.name + "_Ifit")
-            xs, ys = Ifit3T.shape
-            if xs * ys > pnts * pnts:  # too big
-                Ifit3T.box(Ifit3T.xkey, min(Ifit3T.x), max(Ifit3T.x), pnts, Ifit3T.ykey, min(Ifit3T.y), max(Ifit3T.y), pnts)
-                Ifit3T.convert(RVorI, "load2dev")
-            # self.V3T(Ifit3T)  #fast enough
-        else:
-            Ifit3T = IV3T(name=self.name + "_Ifit", meastype=meastype, area=self.lightarea)
-            Ifit3T.box(Iargs["xkey"], -Imax, Imax, pnts, Iargs["ykey"], -Imax, Imax, pnts)
-            # Ifit3T.box('IA',-Imax, Imax, pnts, 'IB', -Imax, Imax, pnts)
-            Ifit3T.convert(RVorI, "load2dev")
-            # self.V3T(Ifit3T)  #fast enough
+    #     if Idata3T:
+    #         Ifit3T = Idata3T.copy()
+    #         Ifit3T.set(name=self.name + "_Ifit")
+    #         xs, ys = Ifit3T.shape
+    #         if xs * ys > pnts * pnts:  # too big
+    #             Ifit3T.box(Ifit3T.xkey, min(Ifit3T.x), max(Ifit3T.x), pnts, Ifit3T.ykey, min(Ifit3T.y), max(Ifit3T.y), pnts)
+    #             Ifit3T.convert(RVorI, "load2dev")
+    #         # self.V3T(Ifit3T)  #fast enough
+    #     else:
+    #         Ifit3T = IV3T(name=self.name + "_Ifit", meastype=meastype, area=self.lightarea)
+    #         Ifit3T.box(Iargs["xkey"], -Imax, Imax, pnts, Iargs["ykey"], -Imax, Imax, pnts)
+    #         # Ifit3T.box('IA',-Imax, Imax, pnts, 'IB', -Imax, Imax, pnts)
+    #         Ifit3T.convert(RVorI, "load2dev")
+    #         # self.V3T(Ifit3T)  #fast enough
 
-        if RVorI == "I":
-            self.V3T(Ifit3T)
-            if Iargs["density"]:
-                Iscale = 1000.0 / Ifit3T.area
-            else:
-                Iscale = 1000.0
-        else:  #'V'
-            # self.I3Trel(Ifit3T)
-            Iscale = 1.0
+    #     if RVorI == "I":
+    #         self.V3T(Ifit3T)
+    #         if Iargs["density"]:
+    #             Iscale = 1000.0 / Ifit3T.area
+    #         else:
+    #             Iscale = 1000.0
+    #     else:  #'V'
+    #         # self.I3Trel(Ifit3T)
+    #         Iscale = 1.0
 
-        if hex:
-            Iargs["xkey"] = RVorI + "xhex"
-            Iargs["ykey"] = RVorI + "yhex"
+    #     if hex:
+    #         Iargs["xkey"] = RVorI + "xhex"
+    #         Iargs["ykey"] = RVorI + "yhex"
 
-        if Idata3T:
-            Iax, Iobjs = Idata3T.plot(**Iargs)  # plot data
-            Ifit3T.plot(inplot=(Iax, Iobjs), cmap=None, ccont="red", **Iargs)  # append fit
-            IdataMPP = Idata3T.MPP()
-        else:
-            Iax, Iobjs = Ifit3T.plot(cmap=None, ccont="red", **Iargs)
+    #     if Idata3T:
+    #         Iax, Iobjs = Idata3T.plot(**Iargs)  # plot data
+    #         Ifit3T.plot(inplot=(Iax, Iobjs), cmap=None, ccont="red", **Iargs)  # append fit
+    #         IdataMPP = Idata3T.MPP()
+    #     else:
+    #         Iax, Iobjs = Ifit3T.plot(cmap=None, ccont="red", **Iargs)
 
-        self.Iax = Iax
-        Iax.set_title("Light P(I)", size=size)
-        # Iax.set(title='P(I)')
-        fitsp.addpoints(Iax, Iargs["xkey"], Iargs["ykey"], density=Iargs["density"], **pltargs)
-        Ifig = Iax.get_figure()
-        Ifig.set_figheight(4)
-        with Rout:
-            Ifig.show()
+    #     self.Iax = Iax
+    #     Iax.set_title("Light P(I)", size=size)
+    #     # Iax.set(title='P(I)')
+    #     fitsp.addpoints(Iax, Iargs["xkey"], Iargs["ykey"], density=Iargs["density"], **pltargs)
+    #     Ifig = Iax.get_figure()
+    #     Ifig.set_figheight(4)
+    #     with Rout:
+    #         Ifig.show()
 
-        ######## initial plots: Vdata and Vfit ##########
-        LVorI = Vargs["xkey"][0]  #'V' or 'I'
+    #     ######## initial plots: Vdata and Vfit ##########
+    #     LVorI = Vargs["xkey"][0]  #'V' or 'I'
 
-        if Vdata3T:
-            Vfit3T = Vdata3T.copy()
-            Vfit3T.set(name=self.name + "_Vfit")
-            xs, ys = Vfit3T.shape
-            if xs * ys > pnts * pnts:  # too big
-                Vfit3T.box(Vfit3T.xkey, min(Vfit3T.x), max(Vfit3T.x), pnts, Vfit3T.ykey, min(Vfit3T.y), max(Vfit3T.y), pnts)
-                Vfit3T.convert(LVorI, "load2dev")
-            if LVorI == "I":
-                self.V3T(Vfit3T)
-            else:
-                # self.I3Trel(Vfit3T)    #too slow
-                pass
-        else:
-            Vfit3T = IV3T(name=self.name + "_Vfit", meastype=meastype, area=self.lightarea)
-            Vfit3T.box(Vargs["xkey"], -Vmax, Vmax, pnts, Vargs["ykey"], -Vmax, Vmax, pnts)
-            # Vfit3T.box('VA',-Vmax, Vmax, pnts, 'VB', -Vmax, Vmax, pnts)
-            Vfit3T.convert(LVorI, "load2dev")
-            # self.I3Trel(Vfit3T)    #necessary
-            if LVorI == "I":
-                self.V3T(Vfit3T)
-            else:
-                self.I3Trel(Vfit3T)  # necessary
+    #     if Vdata3T:
+    #         Vfit3T = Vdata3T.copy()
+    #         Vfit3T.set(name=self.name + "_Vfit")
+    #         xs, ys = Vfit3T.shape
+    #         if xs * ys > pnts * pnts:  # too big
+    #             Vfit3T.box(Vfit3T.xkey, min(Vfit3T.x), max(Vfit3T.x), pnts, Vfit3T.ykey, min(Vfit3T.y), max(Vfit3T.y), pnts)
+    #             Vfit3T.convert(LVorI, "load2dev")
+    #         if LVorI == "I":
+    #             self.V3T(Vfit3T)
+    #         else:
+    #             # self.I3Trel(Vfit3T)    #too slow
+    #             pass
+    #     else:
+    #         Vfit3T = IV3T(name=self.name + "_Vfit", meastype=meastype, area=self.lightarea)
+    #         Vfit3T.box(Vargs["xkey"], -Vmax, Vmax, pnts, Vargs["ykey"], -Vmax, Vmax, pnts)
+    #         # Vfit3T.box('VA',-Vmax, Vmax, pnts, 'VB', -Vmax, Vmax, pnts)
+    #         Vfit3T.convert(LVorI, "load2dev")
+    #         # self.I3Trel(Vfit3T)    #necessary
+    #         if LVorI == "I":
+    #             self.V3T(Vfit3T)
+    #         else:
+    #             self.I3Trel(Vfit3T)  # necessary
 
-        if LVorI == "I":
-            if Vargs["density"]:
-                Vscale = 1000.0 / Vfit3T.area
-            else:
-                Vscale = 1000.0
-        else:  #'V'
-            Vscale = 1.0
+    #     if LVorI == "I":
+    #         if Vargs["density"]:
+    #             Vscale = 1000.0 / Vfit3T.area
+    #         else:
+    #             Vscale = 1000.0
+    #     else:  #'V'
+    #         Vscale = 1.0
 
-        if hex:
-            Vargs["xkey"] = LVorI + "xhex"
-            Vargs["ykey"] = LVorI + "yhex"
+    #     if hex:
+    #         Vargs["xkey"] = LVorI + "xhex"
+    #         Vargs["ykey"] = LVorI + "yhex"
 
-        if Vdata3T:
-            Vax, Vobjs = Vdata3T.plot(**Vargs)  # plot data
-            # Vfit3T.plot(inplot = (Vax, Vobjs), cmap=None, ccont='red', **Vargs) #append fit
-            VdataMPP = Vdata3T.MPP()
-        else:
-            Vax, Vobjs = Vfit3T.plot(cmap=None, ccont="red", **Vargs)
+    #     if Vdata3T:
+    #         Vax, Vobjs = Vdata3T.plot(**Vargs)  # plot data
+    #         # Vfit3T.plot(inplot = (Vax, Vobjs), cmap=None, ccont='red', **Vargs) #append fit
+    #         VdataMPP = Vdata3T.MPP()
+    #     else:
+    #         Vax, Vobjs = Vfit3T.plot(cmap=None, ccont="red", **Vargs)
 
-        self.Vax = Vax
-        Vax.set_title("Light P(V)", size=size)
-        # Vax.set(title='P(V)')
-        fitsp.addpoints(Vax, Vargs["xkey"], Vargs["ykey"], density=Vargs["density"], **pltargs)
-        Vfig = Vax.get_figure()
-        Vfig.set_figheight(4)
-        with Lout:
-            Vfig.show()
+    #     self.Vax = Vax
+    #     Vax.set_title("Light P(V)", size=size)
+    #     # Vax.set(title='P(V)')
+    #     fitsp.addpoints(Vax, Vargs["xkey"], Vargs["ykey"], density=Vargs["density"], **pltargs)
+    #     Vfig = Vax.get_figure()
+    #     Vfig.set_figheight(4)
+    #     with Lout:
+    #         Vfig.show()
 
-        ######## initial plots: darkData and darkFit ##########
-        if darkData3T:
-            Lax, Rax = darkData3T.plotIVslice(step=2, log=True)  # plot dark data
-            Lax.set_xlim(np.min(darkData3T.y) - 0.1, np.max(darkData3T.y) + 0.1)
-            Rax.set_xlim(np.min(darkData3T.x) - 0.1, np.max(darkData3T.x) + 0.1)
-            self.Lax = Lax
-            self.Rax = Rax
-            Lax.set_title("Top coupled dark I(V)", size=size)
-            Rax.set_title("Bottom coupled dark I(V)", size=size)
-            # create dark fit model
-            darkFit3T = darkData3T.copy()  # same 2D span as data
-            darkFit3T.set(name=self.name + "_darkfit")
-            # create top dark IV with Ibot=0
-            dlntop = IV3T(name="dlntop", meastype="CZ", area=self.lightarea)
-            dlntop.line("Ito", dlo, dhi, dpnts, "Iro", "0", log=True)
-            # create bot dark IV with Itop=0
-            dlnbot = IV3T(name="dlnbot", meastype="CZ", area=self.lightarea)
-            dlnbot.line("Iro", dlo, dhi, dpnts, "Ito", "0", log=True)
+    #     ######## initial plots: darkData and darkFit ##########
+    #     if darkData3T:
+    #         Lax, Rax = darkData3T.plotIVslice(step=2, log=True)  # plot dark data
+    #         Lax.set_xlim(np.min(darkData3T.y) - 0.1, np.max(darkData3T.y) + 0.1)
+    #         Rax.set_xlim(np.min(darkData3T.x) - 0.1, np.max(darkData3T.x) + 0.1)
+    #         self.Lax = Lax
+    #         self.Rax = Rax
+    #         Lax.set_title("Top coupled dark I(V)", size=size)
+    #         Rax.set_title("Bottom coupled dark I(V)", size=size)
+    #         # create dark fit model
+    #         darkFit3T = darkData3T.copy()  # same 2D span as data
+    #         darkFit3T.set(name=self.name + "_darkfit")
+    #         # create top dark IV with Ibot=0
+    #         dlntop = IV3T(name="dlntop", meastype="CZ", area=self.lightarea)
+    #         dlntop.line("Ito", dlo, dhi, dpnts, "Iro", "0", log=True)
+    #         # create bot dark IV with Itop=0
+    #         dlnbot = IV3T(name="dlnbot", meastype="CZ", area=self.lightarea)
+    #         dlnbot.line("Iro", dlo, dhi, dpnts, "Ito", "0", log=True)
 
-            Jtop = self.top.Jext  # remember light
-            Jbot = self.bot.Jext
-            self.top.Jext = Jtop * dsun[0]  # make dark (almost)
-            self.bot.Jext = Jbot * dsun[1]
+    #         Jtop = self.top.Jext  # remember light
+    #         Jbot = self.bot.Jext
+    #         self.top.Jext = Jtop * dsun[0]  # make dark (almost)
+    #         self.bot.Jext = Jbot * dsun[1]
 
-            # calculate dark fit
-            self.V3T(dlntop)  # fast
-            # with self.debugout: print(dlntop)
-            Lax.plot(dlntop.VB, abs(dlntop.IB) * scale, c="black", label="_dlntop", zorder=5)
-            self.V3T(dlnbot)  # fast
-            # with self.debugout: print(dlnbot)
-            Rax.plot(dlnbot.VA, abs(dlnbot.IA) * scale, c="black", label="_dlnbot", zorder=5)
-            if False:  # slow
-                self.I3Trel(darkFit3T)
-                darkFit3T.plotIVslice(step=2, log=True, inplots=(Lax, Rax), labelplus="_fit")
+    #         # calculate dark fit
+    #         self.V3T(dlntop)  # fast
+    #         # with self.debugout: print(dlntop)
+    #         Lax.plot(dlntop.VB, abs(dlntop.IB) * scale, c="black", label="_dlntop", zorder=5)
+    #         self.V3T(dlnbot)  # fast
+    #         # with self.debugout: print(dlnbot)
+    #         Rax.plot(dlnbot.VA, abs(dlnbot.IA) * scale, c="black", label="_dlnbot", zorder=5)
+    #         if False:  # slow
+    #             self.I3Trel(darkFit3T)
+    #             darkFit3T.plotIVslice(step=2, log=True, inplots=(Lax, Rax), labelplus="_fit")
 
-            self.top.Jext = Jtop  # make light again
-            self.bot.Jext = Jbot
-            Lax.get_figure().set_figheight(4)
-            Rax.get_figure().set_figheight(4)
-            with Lout:
-                Lax.get_figure().show()
-            with Rout:
-                Rax.get_figure().show()
-        else:
-            darkFit3T = None
+    #         self.top.Jext = Jtop  # make light again
+    #         self.bot.Jext = Jbot
+    #         Lax.get_figure().set_figheight(4)
+    #         Rax.get_figure().set_figheight(4)
+    #         with Lout:
+    #             Lax.get_figure().show()
+    #         with Rout:
+    #             Rax.get_figure().show()
+    #     else:
+    #         darkFit3T = None
 
-        if restart:
-            plt.ion()
+    #     if restart:
+    #         plt.ion()
 
-        in_name.observe(on_3Tchange, names="value")  # update values
-        in_Rz.observe(on_3Tchange, names="value")  # update values
+    #     in_name.observe(on_3Tchange, names="value")  # update values
+    #     in_Rz.observe(on_3Tchange, names="value")  # update values
 
-        # junction ui
-        uit = self.top.controls()
-        uib = self.bot.controls()
-        junc_ui = widgets.HBox([uit, uib])
-        for jui in [uit, uib]:
-            kids = jui.children
-            for cntrl in kids:
-                if type(cntrl) in replot_types:
-                    cntrl.observe(on_3Treplot, names="value")  # replot fast
-        in_Rz.observe(on_3Treplot, names="value")  # replot fast
-        in_savefig.on_click(on_3Treplot)  # replot all
-        in_3Tbut.on_click(on_3Treplot)  # replot all
-        in_Dbut.on_click(on_3Treplot)  # replot some
-        in_Ibut.on_click(on_3Treplot)  # replot some
-        in_Vbut.on_click(on_3Treplot)  # replot some
-        in_Mbut.on_click(on_3Treplot)  # replot some
+    #     # junction ui
+    #     uit = self.top.controls()
+    #     uib = self.bot.controls()
+    #     junc_ui = widgets.HBox([uit, uib])
+    #     for jui in [uit, uib]:
+    #         kids = jui.children
+    #         for cntrl in kids:
+    #             if type(cntrl) in replot_types:
+    #                 cntrl.observe(on_3Treplot, names="value")  # replot fast
+    #     in_Rz.observe(on_3Treplot, names="value")  # replot fast
+    #     in_savefig.on_click(on_3Treplot)  # replot all
+    #     in_3Tbut.on_click(on_3Treplot)  # replot all
+    #     in_Dbut.on_click(on_3Treplot)  # replot some
+    #     in_Ibut.on_click(on_3Treplot)  # replot some
+    #     in_Vbut.on_click(on_3Treplot)  # replot some
+    #     in_Mbut.on_click(on_3Treplot)  # replot some
 
-        in_Mbut.click()  # calculate MPP
+    #     in_Mbut.click()  # calculate MPP
 
-        ui = widgets.VBox([ToutBox, VoutBox, tand_ui, junc_ui])
-        self.ui = ui
+    #     ui = widgets.VBox([ToutBox, VoutBox, tand_ui, junc_ui])
+    #     self.ui = ui
 
-        return ui, Vax, Iax
+    #     return ui, Vax, Iax
 
-    def plot(self, pnts=31, meastype="CZ", oper="load2dev", cmap="terrain"):
-        """
-        calculate and plot Tandem3T devices 'self'
+    # def plot(self, pnts=31, meastype="CZ", oper="load2dev", cmap="terrain"):
+    #     """
+    #     calculate and plot Tandem3T devices 'self'
 
-        """
+    #     """
 
-        # bounding points
-        factor = 1.2
-        pltargs = {
-            "lw": 0,
-            "ms": 7,
-            "mew": 1,
-            "mec": "black",
-            "mfc": "white",
-            "marker": "o",
-            "c": "red",
-            "label": "fitsp",
-            "zorder": 5,
-        }
-        sp = self.specialpoints(meastype)
-        colors = ["white", "lightgreen", "lightgray", "pink", "orange", "cyan", "cyan", "cyan", "cyan", "cyan"]
-        Vmax = max(abs(sp.Vzt[0]), abs(sp.Vrz[0]), abs(sp.Vtr[0]))
-        Imax = max(abs(sp.Iro[1]), abs(sp.Izo[1]), abs(sp.Ito[1]))
-        ii = sp.names.index("MPP")  # index of MPP from sp
+    #     # bounding points
+    #     factor = 1.2
+    #     pltargs = {
+    #         "lw": 0,
+    #         "ms": 7,
+    #         "mew": 1,
+    #         "mec": "black",
+    #         "mfc": "white",
+    #         "marker": "o",
+    #         "c": "red",
+    #         "label": "fitsp",
+    #         "zorder": 5,
+    #     }
+    #     sp = self.specialpoints(meastype)
+    #     colors = ["white", "lightgreen", "lightgray", "pink", "orange", "cyan", "cyan", "cyan", "cyan", "cyan"]
+    #     Vmax = max(abs(sp.Vzt[0]), abs(sp.Vrz[0]), abs(sp.Vtr[0]))
+    #     Imax = max(abs(sp.Iro[1]), abs(sp.Izo[1]), abs(sp.Ito[1]))
+    #     ii = sp.names.index("MPP")  # index of MPP from sp
 
-        iv = list()  # empty list to contain IV3T structures
-        axs = list()  # empty list to contain axis of each figure
-        # figs = list()  #empty list to contain each figure
+    #     iv = list()  # empty list to contain IV3T structures
+    #     axs = list()  # empty list to contain axis of each figure
+    #     # figs = list()  #empty list to contain each figure
 
-        for i, VorI in enumerate(["V", "I"]):
+    #     for i, VorI in enumerate(["V", "I"]):
 
-            ts = time()
-            # create box IV3T instance
-            name = VorI + "plot"
-            common = meastype[1].lower()
-            if VorI == "V":
-                devlist = IV3T.Vdevlist.copy()  # ['Vzt','Vrz','Vtr']
-                factor = 1.1
-                xmax = Vmax * factor
-                ymax = Vmax * factor
-            elif VorI == "I":
-                devlist = IV3T.Idevlist.copy()  # ['Iro','Izo','Ito']
-                factor = 3.0
-                xmax = Imax * factor
-                ymax = Imax * factor
+    #         ts = time()
+    #         # create box IV3T instance
+    #         name = VorI + "plot"
+    #         common = meastype[1].lower()
+    #         if VorI == "V":
+    #             devlist = IV3T.Vdevlist.copy()  # ['Vzt','Vrz','Vtr']
+    #             factor = 1.1
+    #             xmax = Vmax * factor
+    #             ymax = Vmax * factor
+    #         elif VorI == "I":
+    #             devlist = IV3T.Idevlist.copy()  # ['Iro','Izo','Ito']
+    #             factor = 3.0
+    #             xmax = Imax * factor
+    #             ymax = Imax * factor
 
-            if oper == "load2dev":
-                xkey = VorI + "A"
-                ykey = VorI + "B"
-                # ax.set_title(self.name + ' P-'+VorI+'-'+VorI + ' ' + meastype + '-mode ' , loc='center')
-            elif oper == "dev2load":
-                xkey = devlist[0]
-                ykey = devlist[1]
-                # ax.set_title(self.name + ' P-'+VorI+'-'+VorI , loc='center')
-            elif oper == "dev2hex":
-                xkey = VorI + "xhex"
-                ykey = VorI + "yhex"
-            elif oper == "hex2dev":
-                xkey = VorI + "xhex"
-                ykey = VorI + "yhex"
+    #         if oper == "load2dev":
+    #             xkey = VorI + "A"
+    #             ykey = VorI + "B"
+    #             # ax.set_title(self.name + ' P-'+VorI+'-'+VorI + ' ' + meastype + '-mode ' , loc='center')
+    #         elif oper == "dev2load":
+    #             xkey = devlist[0]
+    #             ykey = devlist[1]
+    #             # ax.set_title(self.name + ' P-'+VorI+'-'+VorI , loc='center')
+    #         elif oper == "dev2hex":
+    #             xkey = VorI + "xhex"
+    #             ykey = VorI + "yhex"
+    #         elif oper == "hex2dev":
+    #             xkey = VorI + "xhex"
+    #             ykey = VorI + "yhex"
 
-            iv.append(IV3T(name=name, meastype=meastype, area=self.lightarea))  # add another IV3T class to iv list
-            iv[i].box(xkey, -xmax, xmax, pnts, ykey, -ymax, ymax, pnts)
-            if oper:
-                iv[i].convert(VorI, oper)
+    #         iv.append(IV3T(name=name, meastype=meastype, area=self.lightarea))  # add another IV3T class to iv list
+    #         iv[i].box(xkey, -xmax, xmax, pnts, ykey, -ymax, ymax, pnts)
+    #         if oper:
+    #             iv[i].convert(VorI, oper)
 
-            if VorI == "V":
-                self.I3Trel(iv[i])  # calculate I(V)
-            else:
-                self.V3T(iv[i])  # calculate V(I)
+    #         if VorI == "V":
+    #             self.I3Trel(iv[i])  # calculate I(V)
+    #         else:
+    #             self.V3T(iv[i])  # calculate V(I)
 
-            sp.append(iv[i].MPP(VorI))  # append MPP of current iv[i] to special points
+    #         sp.append(iv[i].MPP(VorI))  # append MPP of current iv[i] to special points
 
-            ax, objs = iv[i].plot(xkey=xkey, ykey=ykey, cmap=cmap)
-            sp.addpoints(ax, xkey, ykey, **pltargs)
-            axs.append(ax)
-            # figs.append(fig)
+    #         ax, objs = iv[i].plot(xkey=xkey, ykey=ykey, cmap=cmap)
+    #         sp.addpoints(ax, xkey, ykey, **pltargs)
+    #         axs.append(ax)
+    #         # figs.append(fig)
 
-            xkey = VorI + "xhex"
-            ykey = VorI + "yhex"
-            ax, objs = iv[i].plot(xkey=xkey, ykey=ykey, cmap=cmap)
-            sp.addpoints(ax, xkey, ykey, **pltargs)
-            axs.append(ax)
-            # figs.append(fig)
+    #         xkey = VorI + "xhex"
+    #         ykey = VorI + "yhex"
+    #         ax, objs = iv[i].plot(xkey=xkey, ykey=ykey, cmap=cmap)
+    #         sp.addpoints(ax, xkey, ykey, **pltargs)
+    #         axs.append(ax)
+    #         # figs.append(fig)
 
-            te = time()
-            dt = te - ts
-            print("axs[{0:g}]: {1:d}pnts , {2:2.4f} s".format(i, pnts, dt))
+    #         te = time()
+    #         dt = te - ts
+    #         print("axs[{0:g}]: {1:d}pnts , {2:2.4f} s".format(i, pnts, dt))
 
-        return axs, iv, sp
+    #     return axs, iv, sp
