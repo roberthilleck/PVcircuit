@@ -397,7 +397,7 @@ class EQE(object):
         # class attributes
 
         self.ui = None
-        self.debugout = widgets.Output()  # debug output
+        # self.debugout = widgets.Output()  # debug output
         self.name = name  # name of EQE object
         self.rawEQE = rawEQE  # 2D(lambda)(junction) raw input rawEQE (not LC corrected)
         self.xEQE = xEQE  # wavelengths [nm] for rawEQE data

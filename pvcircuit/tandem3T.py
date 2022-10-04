@@ -9,7 +9,6 @@ import math  # simple math
 import os
 from time import time
 
-import ipywidgets as widgets
 import matplotlib as mpl  # plotting
 import matplotlib.pyplot as plt  # plotting
 import numpy as np  # arrays
@@ -40,7 +39,7 @@ class Tandem3T(object):
         self.Iax = None
         self.Rax = None
         self.Lax = None
-        self.debugout = widgets.Output()  # debug output
+        # self.debugout = widgets.Output()  # debug output
 
         # set attributes
         self.name = name
@@ -92,8 +91,8 @@ class Tandem3T(object):
                     key = desc
                     attrval = getattr(self, key)  # current value of attribute
                     if cval != attrval:
-                        with self.debugout:
-                            print("Tupdate: " + key, attrval)
+                        # with self.debugout:
+                        #     print("Tupdate: " + key, attrval)
                         cntrl.value = attrval
                 if desc == "Recalc":
                     cntrl.click()  # click button
@@ -101,8 +100,8 @@ class Tandem3T(object):
     def set(self, **kwargs):
         # controlled update of Tandem3T attributes
 
-        with self.debugout:
-            print("Tset: ", list(kwargs.keys()))
+        # with self.debugout:
+        #     print("Tset: ", list(kwargs.keys()))
 
         # junction kwargs
         jlist = Junction.ATTR.copy() + Junction.ARY_ATTR.copy()
@@ -116,8 +115,8 @@ class Tandem3T(object):
                         jikwargs[key] = value[i]
                     else:
                         jikwargs[key] = value
-                with self.debugout:
-                    print("T2J[" + str(i) + "]: ", jikwargs)
+                # with self.debugout:
+                #     print("T2J[" + str(i) + "]: ", jikwargs)
                 junc.set(**jikwargs)
 
         # remaining Multi2T kwargs

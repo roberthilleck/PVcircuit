@@ -9,7 +9,6 @@ import math  # simple math
 import os
 from time import time
 
-import ipywidgets as widgets
 import matplotlib.pyplot as plt  # plotting
 import numpy as np  # arrays
 import pandas as pd
@@ -52,11 +51,11 @@ class Multi2T(object):
 
         self.update_now = False
         self.ui = None
-        
+
         self.Vpoints = None
         self.Ipoints = None
 
-        self.debugout = widgets.Output()  # debug output
+        # self.debugout = widgets.Output()  # debug output
         # self.debugout.layout.height = '400px'
 
         self.name = name
@@ -172,8 +171,8 @@ class Multi2T(object):
                     key = desc
                     attrval = getattr(self, key)  # current value of attribute
                     if cval != attrval:
-                        with self.debugout:
-                            print("Mupdate: " + key, attrval)
+                        # with self.debugout:
+                        #     print("Mupdate: " + key, attrval)
                         cntrl.value = attrval
                 if desc == "Recalc":
                     cntrl.click()  # click button
@@ -181,8 +180,8 @@ class Multi2T(object):
     def set(self, **kwargs):
         # controlled update of Multi2T attributes
 
-        with self.debugout:
-            print("Mset: ", list(kwargs.keys()))
+        # with self.debugout:
+        #     print("Mset: ", list(kwargs.keys()))
 
         # junction kwargs
         jlist = Junction.ATTR.copy() + Junction.ARY_ATTR.copy()
@@ -197,8 +196,8 @@ class Multi2T(object):
                         jikwargs[key] = value[i]
                     else:
                         jikwargs[key] = value
-                with self.debugout:
-                    print("M2J[" + str(i) + "]: ", jikwargs)
+                # with self.debugout:
+                #     print("M2J[" + str(i) + "]: ", jikwargs)
                 junc.set(**jikwargs)
 
         # remaining Multi2T kwargs

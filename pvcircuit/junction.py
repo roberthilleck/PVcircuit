@@ -12,7 +12,6 @@ from datetime import datetime
 from functools import lru_cache
 from time import time
 
-import ipywidgets as widgets
 import numpy as np  # arrays
 import scipy.constants as con  # physical constants
 from parse import parse
@@ -124,7 +123,7 @@ class Junction(object):
     ):
 
         self.ui = None
-        self.debugout = widgets.Output()  # debug output
+        # self.debugout = widgets.Output()  # debug output
         self.RBB_dict = {}
 
         # user inputs
@@ -261,8 +260,8 @@ class Junction(object):
     def set(self, **kwargs):
         # controlled update of Junction attributes
 
-        with self.debugout:
-            print("Jset(" + self.name + "): ", list(kwargs.keys()))
+        # with self.debugout:
+        #     print("Jset(" + self.name + "): ", list(kwargs.keys()))
 
         for testkey, value in kwargs.items():
             if testkey.endswith("]") and testkey.find("[") > 0:
@@ -307,19 +306,19 @@ class Junction(object):
                         if ind < localarray.size:
                             localarray[ind] = np.float64(value)  # add new value
                             self.__dict__[key] = localarray
-                            with self.debugout:
-                                print("scalar", key, ind, localarray)
+                            # with self.debugout:
+                            #     print("scalar", key, ind, localarray)
                 else:
                     self.__dict__[key] = np.array(value)
-                    with self.debugout:
-                        print("array", key, value)
+                    # with self.debugout:
+                    #     print("array", key, value)
             elif key in self.ATTR:  # scalar float
                 self.__dict__[key] = np.float64(value)
-                with self.debugout:
-                    print("ATTR", key, value)
-            else:
-                with self.debugout:
-                    print("no Junckey", key)
+                # with self.debugout:
+                #     print("ATTR", key, value)
+            # else:
+            #     with self.debugout:
+            #         print("no Junckey", key)
 
     @property
     def Jphoto(self):
