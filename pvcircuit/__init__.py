@@ -52,6 +52,7 @@ PintMD = qe.PintMD
 EQE = qe.EQE
 
 TMY = EY.TMY
+Meteo = EY.Meteo
 
 #
 VERSION = 0.04

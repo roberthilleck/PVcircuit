@@ -24,5 +24,6 @@ setup(
         "tandems>=0.989",
         "openpyxl>=3.0.10",
         "et_xmlfile>=1.1.0",
+        "tqdm>=4.64.0",
     ],
 )
