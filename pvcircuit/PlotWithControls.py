@@ -1159,7 +1159,8 @@ class PlotsWithControls:
         jui = []
         # list of junction controls
         for i in range(class_to_plot.njuncs):
-            jui.append(class_to_plot.j[i].controls())
+            # jui.append(class_to_plot.j[i].controls())
+            jui.append(self.controls_junction(class_to_plot.j[i]))
             kids = jui[i].children
             for cntrl in kids:
                 if type(cntrl) in replot_types:
@@ -1378,3 +1379,47 @@ class PlotsWithControls:
                     transform=lax.transAxes,
                 )
             return lfig, lax
+
+
+    def update(self):
+        # update Junction self.ui controls
+
+        if self.ui:  # junction user interface has been created
+            if self.RBB_dict:
+                if self.RBB_dict["method"]:
+                    RBB_keys = list(self.RBB_dict.keys())
+                else:
+                    RBB_keys = []
+
+            cntrls = self.ui.children
+            for cntrl in cntrls:
+                desc = cntrl.trait_values().get("description", "nodesc")  # control description
+                cval = cntrl.trait_values().get("value", "noval")  # control value
+                if desc == "nodesc" or cval == "noval":
+                    break
+                elif desc.endswith("]") and desc.find("[") > 0:
+                    key, ind = parse("{}[{:d}]", desc)
+                else:
+                    key = desc
+                    ind = None
+
+                if key in self.ATTR:  # Junction scalar controls to update
+                    attrval = getattr(self, key)  # current value of attribute
+                    if cval != attrval:
+                        with self.debugout:
+                            print("Jupdate: " + desc, attrval)
+                        cntrl.value = attrval
+                elif key in self.ARY_ATTR:  # Junction array controls to update
+                    attrval = getattr(self, key)  # current value of attribute
+                    if isinstance(ind, int):
+                        if isinstance(attrval, np.ndarray):
+                            if cval != attrval[ind]:
+                                with self.debugout:
+                                    print("Jupdate: " + desc, attrval[ind])
+                                cntrl.value = attrval[ind]
+                elif key in RBB_keys:
+                    attrval = self.RBB_dict[key]
+                    if cval != attrval:
+                        with self.debugout:
+                            print("Jupdate: " + desc, attrval)
+                        cntrl.value = attrval

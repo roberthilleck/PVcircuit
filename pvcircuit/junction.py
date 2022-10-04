@@ -208,55 +208,55 @@ class Junction(object):
     def __repr__(self):
         return str(self)
 
-    """
-    def __setattr__(self, key, value):
-        # causes problems
-        super(Junction, self).__setattr__(key, value) 
-        self.set(key = value)
-    """
+    # """
+    # def __setattr__(self, key, value):
+    #     # causes problems
+    #     super(Junction, self).__setattr__(key, value) 
+    #     self.set(key = value)
+    # """
 
-    def update(self):
-        # update Junction self.ui controls
+    # def update(self):
+    #     # update Junction self.ui controls
 
-        if self.ui:  # junction user interface has been created
-            if self.RBB_dict:
-                if self.RBB_dict["method"]:
-                    RBB_keys = list(self.RBB_dict.keys())
-                else:
-                    RBB_keys = []
+    #     if self.ui:  # junction user interface has been created
+    #         if self.RBB_dict:
+    #             if self.RBB_dict["method"]:
+    #                 RBB_keys = list(self.RBB_dict.keys())
+    #             else:
+    #                 RBB_keys = []
 
-            cntrls = self.ui.children
-            for cntrl in cntrls:
-                desc = cntrl.trait_values().get("description", "nodesc")  # control description
-                cval = cntrl.trait_values().get("value", "noval")  # control value
-                if desc == "nodesc" or cval == "noval":
-                    break
-                elif desc.endswith("]") and desc.find("[") > 0:
-                    key, ind = parse("{}[{:d}]", desc)
-                else:
-                    key = desc
-                    ind = None
+    #         cntrls = self.ui.children
+    #         for cntrl in cntrls:
+    #             desc = cntrl.trait_values().get("description", "nodesc")  # control description
+    #             cval = cntrl.trait_values().get("value", "noval")  # control value
+    #             if desc == "nodesc" or cval == "noval":
+    #                 break
+    #             elif desc.endswith("]") and desc.find("[") > 0:
+    #                 key, ind = parse("{}[{:d}]", desc)
+    #             else:
+    #                 key = desc
+    #                 ind = None
 
-                if key in self.ATTR:  # Junction scalar controls to update
-                    attrval = getattr(self, key)  # current value of attribute
-                    if cval != attrval:
-                        with self.debugout:
-                            print("Jupdate: " + desc, attrval)
-                        cntrl.value = attrval
-                elif key in self.ARY_ATTR:  # Junction array controls to update
-                    attrval = getattr(self, key)  # current value of attribute
-                    if isinstance(ind, int):
-                        if isinstance(attrval, np.ndarray):
-                            if cval != attrval[ind]:
-                                with self.debugout:
-                                    print("Jupdate: " + desc, attrval[ind])
-                                cntrl.value = attrval[ind]
-                elif key in RBB_keys:
-                    attrval = self.RBB_dict[key]
-                    if cval != attrval:
-                        with self.debugout:
-                            print("Jupdate: " + desc, attrval)
-                        cntrl.value = attrval
+    #             if key in self.ATTR:  # Junction scalar controls to update
+    #                 attrval = getattr(self, key)  # current value of attribute
+    #                 if cval != attrval:
+    #                     with self.debugout:
+    #                         print("Jupdate: " + desc, attrval)
+    #                     cntrl.value = attrval
+    #             elif key in self.ARY_ATTR:  # Junction array controls to update
+    #                 attrval = getattr(self, key)  # current value of attribute
+    #                 if isinstance(ind, int):
+    #                     if isinstance(attrval, np.ndarray):
+    #                         if cval != attrval[ind]:
+    #                             with self.debugout:
+    #                                 print("Jupdate: " + desc, attrval[ind])
+    #                             cntrl.value = attrval[ind]
+    #             elif key in RBB_keys:
+    #                 attrval = self.RBB_dict[key]
+    #                 if cval != attrval:
+    #                     with self.debugout:
+    #                         print("Jupdate: " + desc, attrval)
+    #                     cntrl.value = attrval
 
     def set(self, **kwargs):
         # controlled update of Junction attributes
@@ -548,156 +548,156 @@ class Junction(object):
 
         return Vmid
 
-    def controls(self):
-        """
-        use interactive_output for GUI in IPython
-        """
+    # def controls(self):
+    #     """
+    #     use interactive_output for GUI in IPython
+    #     """
 
-        cell_layout = widgets.Layout(display="inline_flex", flex_flow="row", justify_content="flex-end", width="300px")
-        # controls
-        in_name = widgets.Text(value=self.name, description="name", layout=cell_layout, continuous_update=False)
-        in_Eg = widgets.FloatSlider(
-            value=self.Eg, min=0.1, max=3.0, step=0.01, description="Eg", layout=cell_layout, readout_format=".2f"
-        )
-        in_TC = widgets.FloatSlider(
-            value=self.TC, min=-40, max=200.0, step=2, description="TC", layout=cell_layout, readout_format=".1f"
-        )
-        in_Jext = widgets.FloatSlider(
-            value=self.Jext, min=0.0, max=0.080, step=0.001, description="Jext", layout=cell_layout, readout_format=".4f"
-        )
-        in_JLC = widgets.FloatSlider(
-            value=self.JLC,
-            min=0.0,
-            max=0.080,
-            step=0.001,
-            description="JLC",
-            layout=cell_layout,
-            readout_format=".4f",
-            disabled=True,
-        )
-        in_Gsh = widgets.FloatLogSlider(
-            value=self.Gsh, base=10, min=-12, max=3, step=0.01, description="Gsh", layout=cell_layout, readout_format=".2e"
-        )
-        in_Rser = widgets.FloatLogSlider(
-            value=self.Rser, base=10, min=-7, max=3, step=0.01, description="Rser", layout=cell_layout, readout_format=".2e"
-        )
-        in_lightarea = widgets.FloatLogSlider(
-            value=self.lightarea, base=10, min=-6, max=3.0, step=0.1, description="lightarea", layout=cell_layout
-        )
-        in_totalarea = widgets.FloatSlider(
-            value=self.totalarea, min=self.lightarea, max=1e3, step=0.1, description="totalarea", layout=cell_layout
-        )
-        in_beta = widgets.FloatSlider(
-            value=self.beta, min=0.0, max=50.0, step=0.1, description="beta", layout=cell_layout, readout_format=".2e"
-        )
-        in_gamma = widgets.FloatSlider(
-            value=self.gamma, min=0.0, max=3.0, step=0.1, description="gamma", layout=cell_layout, readout_format=".2e"
-        )
-        in_pn = widgets.IntSlider(value=self.pn, min=-1, max=1, step=1, description="pn", layout=cell_layout)
+    #     cell_layout = widgets.Layout(display="inline_flex", flex_flow="row", justify_content="flex-end", width="300px")
+    #     # controls
+    #     in_name = widgets.Text(value=self.name, description="name", layout=cell_layout, continuous_update=False)
+    #     in_Eg = widgets.FloatSlider(
+    #         value=self.Eg, min=0.1, max=3.0, step=0.01, description="Eg", layout=cell_layout, readout_format=".2f"
+    #     )
+    #     in_TC = widgets.FloatSlider(
+    #         value=self.TC, min=-40, max=200.0, step=2, description="TC", layout=cell_layout, readout_format=".1f"
+    #     )
+    #     in_Jext = widgets.FloatSlider(
+    #         value=self.Jext, min=0.0, max=0.080, step=0.001, description="Jext", layout=cell_layout, readout_format=".4f"
+    #     )
+    #     in_JLC = widgets.FloatSlider(
+    #         value=self.JLC,
+    #         min=0.0,
+    #         max=0.080,
+    #         step=0.001,
+    #         description="JLC",
+    #         layout=cell_layout,
+    #         readout_format=".4f",
+    #         disabled=True,
+    #     )
+    #     in_Gsh = widgets.FloatLogSlider(
+    #         value=self.Gsh, base=10, min=-12, max=3, step=0.01, description="Gsh", layout=cell_layout, readout_format=".2e"
+    #     )
+    #     in_Rser = widgets.FloatLogSlider(
+    #         value=self.Rser, base=10, min=-7, max=3, step=0.01, description="Rser", layout=cell_layout, readout_format=".2e"
+    #     )
+    #     in_lightarea = widgets.FloatLogSlider(
+    #         value=self.lightarea, base=10, min=-6, max=3.0, step=0.1, description="lightarea", layout=cell_layout
+    #     )
+    #     in_totalarea = widgets.FloatSlider(
+    #         value=self.totalarea, min=self.lightarea, max=1e3, step=0.1, description="totalarea", layout=cell_layout
+    #     )
+    #     in_beta = widgets.FloatSlider(
+    #         value=self.beta, min=0.0, max=50.0, step=0.1, description="beta", layout=cell_layout, readout_format=".2e"
+    #     )
+    #     in_gamma = widgets.FloatSlider(
+    #         value=self.gamma, min=0.0, max=3.0, step=0.1, description="gamma", layout=cell_layout, readout_format=".2e"
+    #     )
+    #     in_pn = widgets.IntSlider(value=self.pn, min=-1, max=1, step=1, description="pn", layout=cell_layout)
 
-        # linkages
-        # arealink = widgets.jslink((in_lightarea, "value"), (in_totalarea, "min"))  # also jsdlink works
+    #     # linkages
+    #     # arealink = widgets.jslink((in_lightarea, "value"), (in_totalarea, "min"))  # also jsdlink works
 
-        # attr = ["name"] + self.ATTR.copy()
-        cntrls = [in_name, in_Eg, in_TC, in_Gsh, in_Rser, in_lightarea, in_totalarea, in_Jext, in_JLC, in_beta, in_gamma, in_pn]
-        # sing_dict = dict(zip(attr, cntrls))
-        # singout = widgets.interactive_output(self.set, sing_dict)  #all at once
+    #     # attr = ["name"] + self.ATTR.copy()
+    #     cntrls = [in_name, in_Eg, in_TC, in_Gsh, in_Rser, in_lightarea, in_totalarea, in_Jext, in_JLC, in_beta, in_gamma, in_pn]
+    #     # sing_dict = dict(zip(attr, cntrls))
+    #     # singout = widgets.interactive_output(self.set, sing_dict)  #all at once
 
-        def on_juncchange(change):
-            # function for changing values
-            old = change["old"]  # old value
-            new = change["new"]  # new value
-            owner = change["owner"]  # control
-            value = owner.value
-            desc = owner.description
+    #     def on_juncchange(change):
+    #         # function for changing values
+    #         old = change["old"]  # old value
+    #         new = change["new"]  # new value
+    #         owner = change["owner"]  # control
+    #         value = owner.value
+    #         desc = owner.description
 
-            if new == old:
-                with self.debugout:
-                    print("Jcontrol: " + desc + "=", value)
-            else:
-                with self.debugout:
-                    print("Jcontrol: " + desc + "->", value)
-                self.set(**{desc: value})
+    #         if new == old:
+    #             with self.debugout:
+    #                 print("Jcontrol: " + desc + "=", value)
+    #         else:
+    #             with self.debugout:
+    #                 print("Jcontrol: " + desc + "->", value)
+    #             self.set(**{desc: value})
 
-            # iout.clear_output()
-            # with iout: print(self)
+    #         # iout.clear_output()
+    #         # with iout: print(self)
 
-        # diode array
-        in_tit = widgets.Label(value="Junction", description="Junction")
-        in_diodelab = widgets.Label(value="diodes:", description="diodes:")
-        # diode_layout = widgets.Layout(flex_flow="column", align_items="center")
+    #     # diode array
+    #     in_tit = widgets.Label(value="Junction", description="Junction")
+    #     in_diodelab = widgets.Label(value="diodes:", description="diodes:")
+    #     # diode_layout = widgets.Layout(flex_flow="column", align_items="center")
 
-        cntrls.append(in_diodelab)
-        in_n = []  # empty list of n controls
-        in_ratio = []  # empty list of Jratio controls
-        diode_dict = {}
-        for i in range(len(self.n)):
-            in_n.append(
-                widgets.FloatLogSlider(
-                    value=self.n[i], base=10, min=-1, max=1, step=0.001, description="n[" + str(i) + "]", layout=cell_layout
-                )
-            )
-            in_ratio.append(
-                widgets.FloatLogSlider(
-                    value=self.J0ratio[i],
-                    base=10,
-                    min=-6,
-                    max=6,
-                    step=0.1,
-                    description="J0ratio[" + str(i) + "]",
-                    layout=cell_layout,
-                )
-            )
-            cntrls.append(in_n[i])
-            cntrls.append(in_ratio[i])
-            diode_dict["n[" + str(i) + "]"] = in_n[i]
-            diode_dict["J0ratio[" + str(i) + "]"] = in_ratio[i]
-            # hui.append(widgets.HBox([in_n[i],in_ratio[i]]))
-            # cntrls.append(hui[i])
+    #     cntrls.append(in_diodelab)
+    #     in_n = []  # empty list of n controls
+    #     in_ratio = []  # empty list of Jratio controls
+    #     diode_dict = {}
+    #     for i in range(len(self.n)):
+    #         in_n.append(
+    #             widgets.FloatLogSlider(
+    #                 value=self.n[i], base=10, min=-1, max=1, step=0.001, description="n[" + str(i) + "]", layout=cell_layout
+    #             )
+    #         )
+    #         in_ratio.append(
+    #             widgets.FloatLogSlider(
+    #                 value=self.J0ratio[i],
+    #                 base=10,
+    #                 min=-6,
+    #                 max=6,
+    #                 step=0.1,
+    #                 description="J0ratio[" + str(i) + "]",
+    #                 layout=cell_layout,
+    #             )
+    #         )
+    #         cntrls.append(in_n[i])
+    #         cntrls.append(in_ratio[i])
+    #         diode_dict["n[" + str(i) + "]"] = in_n[i]
+    #         diode_dict["J0ratio[" + str(i) + "]"] = in_ratio[i]
+    #         # hui.append(widgets.HBox([in_n[i],in_ratio[i]]))
+    #         # cntrls.append(hui[i])
 
-        # diodeout = widgets.interactive_output(self.set, diode_dict)  #all at once
+    #     # diodeout = widgets.interactive_output(self.set, diode_dict)  #all at once
 
-        if self.RBB_dict:
-            RBB_keys = list(self.RBB_dict.keys())
-            in_rbblab = widgets.Label(value="RBB:", description="RBB:")
-            cntrls.append(in_rbblab)
-            in_rbb = []  # empty list of n controls
-            for i, key in enumerate(RBB_keys):
-                with self.debugout:
-                    print("RBB:", i, key)
-                if key == "method":
-                    in_rbb.append(
-                        widgets.Dropdown(
-                            options=["", "JFG", "bishop"],
-                            value=self.RBB_dict[key],
-                            description=key,
-                            layout=cell_layout,
-                            continuous_update=False,
-                        )
-                    )
-                else:
-                    in_rbb.append(
-                        widgets.FloatLogSlider(
-                            value=self.RBB_dict[key], base=10, min=-10, max=5, step=0.1, description=key, layout=cell_layout
-                        )
-                    )
-                cntrls.append(in_rbb[i])
+    #     if self.RBB_dict:
+    #         RBB_keys = list(self.RBB_dict.keys())
+    #         in_rbblab = widgets.Label(value="RBB:", description="RBB:")
+    #         cntrls.append(in_rbblab)
+    #         in_rbb = []  # empty list of n controls
+    #         for i, key in enumerate(RBB_keys):
+    #             with self.debugout:
+    #                 print("RBB:", i, key)
+    #             if key == "method":
+    #                 in_rbb.append(
+    #                     widgets.Dropdown(
+    #                         options=["", "JFG", "bishop"],
+    #                         value=self.RBB_dict[key],
+    #                         description=key,
+    #                         layout=cell_layout,
+    #                         continuous_update=False,
+    #                     )
+    #                 )
+    #             else:
+    #                 in_rbb.append(
+    #                     widgets.FloatLogSlider(
+    #                         value=self.RBB_dict[key], base=10, min=-10, max=5, step=0.1, description=key, layout=cell_layout
+    #                     )
+    #                 )
+    #             cntrls.append(in_rbb[i])
 
-        for cntrl in cntrls:
-            cntrl.observe(on_juncchange, names="value")
+    #     for cntrl in cntrls:
+    #         cntrl.observe(on_juncchange, names="value")
 
-        # output
-        iout = widgets.Output()
-        iout.layout.height = "5px"
-        # with iout: print(self)
-        cntrls.append(iout)
+    #     # output
+    #     iout = widgets.Output()
+    #     iout.layout.height = "5px"
+    #     # with iout: print(self)
+    #     cntrls.append(iout)
 
-        # user interface
-        box_layout = widgets.Layout(
-            display="flex", flex_flow="column", align_items="center", border="1px solid black", width="320px", height="350px"
-        )
+    #     # user interface
+    #     box_layout = widgets.Layout(
+    #         display="flex", flex_flow="column", align_items="center", border="1px solid black", width="320px", height="350px"
+    #     )
 
-        ui = widgets.VBox([in_tit] + cntrls, layout=box_layout)
-        self.ui = ui  # make it an attribute
+    #     ui = widgets.VBox([in_tit] + cntrls, layout=box_layout)
+    #     self.ui = ui  # make it an attribute
 
-        return ui
+    #     return ui
