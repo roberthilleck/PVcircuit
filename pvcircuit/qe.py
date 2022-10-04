@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
 """
-This is the PVcircuit Package. 
-    pvcircuit.qe    # functions for QE analysis
+This is the PVcircuit Package.
+pvcircuit.qe
+functions for QE analysis
 """
 
-import copy
 import math  # simple math
 import os
 from functools import lru_cache
@@ -17,15 +17,14 @@ import numpy as np  # arrays
 import pandas as pd  # dataframes
 # from scipy.integrate import trapezoid
 import scipy.constants as con  # physical constants
-from cycler import cycler
-from IPython.display import display
 from num2words import num2words
-# from scipy.special import lambertw, gammaincc, gamma   #special functions
+from parse import parse
 from scipy.interpolate import interp1d
-from scipy.optimize import brentq  # root finder
+from scipy.special import gammaincc  # special functions
 
-from pvcircuit.junction import *
-from pvcircuit.multi2T import *
+# TODO extract class with generell physical functions
+from pvcircuit.junction import TK, Vth
+from pvcircuit.multi2T import Multi2T
 
 # colors
 junctioncolors = [
@@ -54,7 +53,8 @@ datapath = os.path.join(pvcpath, "data", "")  # Data files here
 # datapath = os.path.abspath(os.path.relpath('../data/', start=__file__))
 # datapath = pvcpath.replace('/pvcircuit','/data/')
 ASTMfile = os.path.join(datapath, "ASTMG173.csv")
-try:
+
+if os.path.isfile(ASTMfile):
     dfrefspec = pd.read_csv(ASTMfile, index_col=0, header=2)
     wvl = dfrefspec.index.to_numpy(dtype=np.float64, copy=True)
     refspec = dfrefspec.to_numpy(dtype=np.float64, copy=True)  # all three reference spectra
@@ -62,13 +62,11 @@ try:
     AM0 = refspec[:, 0]  # dfrefspec['space'].to_numpy(dtype=np.float64, copy=True)  # 1348.0 W/m2
     AM15G = refspec[:, 1]  # dfrefspec['global'].to_numpy(dtype=np.float64, copy=True) # 1000.5 W/m2
     AM15D = refspec[:, 2]  # dfrefspec['direct'].to_numpy(dtype=np.float64, copy=True) # 900.2 W/m2
-except:
-    print(pvcpath)
-    print(datapath)
-    print(ASTMfile)
+else:
+    raise FileNotFoundError(str(ASTMfile))
 
 
-def JdbMD(EQE, xEQE, TC, Eguess=1.0, kTfilter=3, bplot=False):
+def JdbMD(yEQE, xEQE, TC, Eguess=1.0, kTfilter=3, bplot=False):
     """
     calculate detailed-balance reverse saturation current
     from EQE vs xEQE
@@ -76,14 +74,14 @@ def JdbMD(EQE, xEQE, TC, Eguess=1.0, kTfilter=3, bplot=False):
     debug on bplot
     """
     Vthlocal = Vth(TC)  # kT
-    EQE = np.array(EQE)  # ensure numpy
-    if EQE.ndim == 1:  # 1D EQE[lambda]
-        (nQlams,) = EQE.shape
+    yEQE = np.array(yEQE)  # ensure numpy
+    if yEQE.ndim == 1:  # 1D EQE[lambda]
+        (nQlams,) = yEQE.shape
         njuncs = 1
-    elif EQE.ndim == 2:  # 2D EQE[lambda, junction]
-        nQlams, njuncs = EQE.shape
+    elif yEQE.ndim == 2:  # 2D EQE[lambda, junction]
+        nQlams, njuncs = yEQE.shape
     else:
-        return "dims in EQE:" + str(EQE.ndim)
+        return "dims in EQE:" + str(yEQE.ndim)
 
     Eguess = np.array([Eguess] * njuncs)
 
@@ -107,12 +105,12 @@ def JdbMD(EQE, xEQE, TC, Eguess=1.0, kTfilter=3, bplot=False):
     EkT = nm2eV / Vthlocal / xEQE
     blackbody = np.expand_dims(DBWVL_PREFIX / (xEQE * 1e-9) ** 4 / np.expm1(EkT), axis=1)
 
-    for count in range(10):
+    for _ in range(10):
         nmfilter = nm2eV / (Eguess - Vthlocal * kTfilter)  # MD [652., 930.]
         if njuncs == 1:
-            EQEfilter = np.expand_dims(EQE.copy(), axis=1)
+            EQEfilter = np.expand_dims(yEQE.copy(), axis=1)
         else:
-            EQEfilter = EQE.copy()
+            EQEfilter = yEQE.copy()
 
         for i, lam in enumerate(xEQE):
             EQEfilter[i, :] *= lam < nmfilter  # zero EQE about nmfilter
@@ -128,7 +126,7 @@ def JdbMD(EQE, xEQE, TC, Eguess=1.0, kTfilter=3, bplot=False):
             Eguess = Egnew
 
     if bplot:
-        efig, eax = plt.subplots()
+        _, eax = plt.subplots()
         eax.plot(xEQE, DBintegral[:, 0], c="blue", lw=2, marker=".")
         if njuncs > 1:
             reax = eax.twinx()  # right axis
@@ -142,7 +140,7 @@ def PintMD(Pspec, xspec=wvl):
     return JintMD(None, None, Pspec, xspec)
 
 
-def JintMD(EQE, xEQE, Pspec, xspec=wvl):
+def JintMD(yEQE, xEQE, Pspec, xspec=wvl):
     """
     integrate over spectrum or spectra
     if EQE is None -> calculate Power in [W/m2]
@@ -180,21 +178,21 @@ def JintMD(EQE, xEQE, Pspec, xspec=wvl):
         return "dims in Pspec:" + str(Pspec.ndim)
 
     # check EQE input
-    EQE = np.array(EQE)  # ensure numpy
-    if EQE.ndim == 0:  # scalar or None
-        if np.any(EQE):
+    yEQE = np.array(yEQE)  # ensure numpy
+    if yEQE.ndim == 0:  # scalar or None
+        if np.any(yEQE):
             nQlams = 1  # scalar -> return current
             njuncs = 1
         else:
             nQlams = 1  # None or False -> return power
             njuncs = 0
-    elif EQE.ndim == 1:  # 1D EQE[lambda]
-        (nQlams,) = EQE.shape
+    elif yEQE.ndim == 1:  # 1D EQE[lambda]
+        (nQlams,) = yEQE.shape
         njuncs = 1
-    elif EQE.ndim == 2:  # 2D EQE[lambda, junction]
-        nQlams, njuncs = EQE.shape
+    elif yEQE.ndim == 2:  # 2D EQE[lambda, junction]
+        nQlams, njuncs = yEQE.shape
     else:
-        return "dims in EQE:" + str(EQE.ndim)
+        return "dims in EQE:" + str(yEQE.ndim)
 
     # check x range input
     xEQE = np.array(xEQE, dtype=np.float64)
@@ -210,7 +208,7 @@ def JintMD(EQE, xEQE, Pspec, xspec=wvl):
         return "dims in xEQE:" + str(xEQE.ndim)
 
     if nQlams == 1:
-        EQE = np.full_like(xEQE, EQE)
+        yEQE = np.full_like(xEQE, yEQE)
 
     if xspec.ndim != 1:  # need 1D with same length as Pspec(lam)
         return "dims in xspec:" + str(xspec.ndim) + "!=1"
@@ -244,7 +242,7 @@ def JintMD(EQE, xEQE, Pspec, xspec=wvl):
 
     else:  # calculate J over xrange
         # print(xrange.shape, xEQE.shape, EQE.shape, Pspec.shape)
-        EQEinterp = interp1d(xEQE, EQE, axis=0, fill_value=0)  # interpolate along axis=0
+        EQEinterp = interp1d(xEQE, yEQE, axis=0, fill_value=0)  # interpolate along axis=0
         Jintegral = np.zeros((nrange, nspecs, njuncs), dtype=np.float64)  # 3D array
         if njuncs == 1:
             EQEfine = np.expand_dims((EQEinterp(xrange) * xrange), axis=1) * JCONST  # lambda*EQE(lambda)[lambda,1]
@@ -264,7 +262,7 @@ def JintMD(EQE, xEQE, Pspec, xspec=wvl):
 
 
 @lru_cache(maxsize=100)
-def JdbFromEg(TC, Eg, dbsides=1.0, method=None):
+def JdbFromEg(TC, Eg, dbsides=1.0, method=""):
     """
     return the detailed balance dark current
     assuming a square EQE
@@ -281,7 +279,7 @@ def JdbFromEg(TC, Eg, dbsides=1.0, method=None):
     EgkT = Eg / Vth(TC)
     TKlocal = TK(TC)
 
-    if str(method).lower == "gamma":
+    if method.lower == "gamma":
         # use special function incomplete gamma
         # gamma(3)=2.0 not same incomplete gamma as in Igor
         Jdb = DB_PREFIX * TKlocal**3.0 * gammaincc(3.0, EgkT) * 2.0 * dbsides
@@ -316,9 +314,9 @@ def EgFromJdb(TC, Jdb, Eg=1.0, eps=1e-6, itermax=100, dbsides=1.0):
 
     while count < itermax:
         x1 = off + np.log(1.0 + x0 + x0 * x0 / 2.0)
-        try:
+        if x0:
             tol = abs((x1 - x0) / x0)
-        except:
+        else:
             tol = abs(x1 - x0)
         if tol < eps:
             return x1 * Vthlocal
@@ -366,12 +364,14 @@ class EQE(object):
         elif rawEQE.ndim == 2:  # 2D rawEQE[lambda, junction]
             nQlams, njuncs = rawEQE.shape
         else:
-            return "dims in rawEQE:" + str(rawEQE.ndim)
+            raise ValueError("dims in rawEQE:" + str(rawEQE.ndim))
 
         # check x range input
         xEQE = np.array(xEQE, dtype=np.float64)
         if xEQE.ndim == 0:  # scalar or None
-            xEQE = xspec  # use spec range if no rawEQE range
+            # xEQE = self.xspec  # use spec range if no rawEQE range
+            # TODO not sure what should happen here if ndim == 0
+            raise ValueError("dims in xEQE:" + str(xEQE.ndim))
         if xEQE.ndim == 1:  # 1D
             (nxEQE,) = xEQE.shape
             self.start = min(xEQE)
@@ -379,17 +379,17 @@ class EQE(object):
             if nxEQE == 2:  # evenly spaced x-values (start, stop)
                 xEQE = np.linspace(self.start, self.stop, max(nQlams, 2), dtype=np.float64)
         else:
-            return "dims in xEQE:" + str(xEQE.ndim)
+            raise ValueError("dims in xEQE:" + str(xEQE.ndim))
 
         if nQlams == 1:
             rawEQE = np.full_like(xEQE, rawEQE)  # fill rawEQE across range with scalar input
 
         if xEQE.ndim != 1:  # need 1D with same length as rawEQE(lam)
-            return "dims in xEQE:" + str(xEQE.ndim) + "!=1"
+            raise ValueError("dims in xEQE:" + str(xEQE.ndim) + "!=1")
         elif nQlams == 1:
             pass
         elif len(xEQE) != nQlams:
-            return "nQlams:" + str(len(xEQE)) + "!=" + str(nQlams)
+            raise ValueError("nQlams:" + str(len(xEQE)) + "!=" + str(nQlams))
 
         if sjuncs == None:
             sjuncs = [num2words(junc + 1, to="ordinal") for junc in range(njuncs)]
@@ -404,6 +404,14 @@ class EQE(object):
         self.njuncs = njuncs  # number of junctions
         self.sjuncs = sjuncs  # names of junctions
         self.nQlams = nQlams  # number of wavelengths in rawEQE data
+        self.xspec = None
+        self.Pspec = None  # 2D(lambda)(spectrum) spectral irradiance [W/m2/nm]
+        self.nSlams = None  # number of wavelengths in spectra
+        self.nspecs = None  # number of spectra
+        self.n0 = None  # index of first spectral data that overlaps with rawEQE data
+        self.n1 = None  # index 
+        
+        self.Egs = None
 
         self.corrEQE = np.empty_like(self.rawEQE)  # luminescent coupling corrected EQE same size as rawEQE
         self.etas = np.zeros((njuncs, 3), dtype=np.float64)  # LC factor for next three junctions
@@ -426,7 +434,7 @@ class EQE(object):
             etas[junc, dist] = val  # assign value
             # with self.debugout: print('success')
         raw = self.rawEQE
-        ## TODO: This should be a nested loop, with a break for 10th junctions?
+        # TODO: This should be a nested loop, with a break for 10th junctions?
         for ijunc in range(self.njuncs):
             if ijunc == 0:  # 1st ijunction
                 self.corrEQE[:, ijunc] = raw[:, ijunc]
@@ -455,7 +463,7 @@ class EQE(object):
         EkT = nm2eV / Vthlocal / self.xEQE
         blackbody = np.expand_dims(DBWVL_PREFIX / (self.xEQE * 1e-9) ** 4 / np.expm1(EkT), axis=1)
 
-        for count in range(10):
+        for _ in range(10):
             nmfilter = nm2eV / (Eguess - Vthlocal * kTfilter)  # MD [652., 930.]
             EQEfilter = self.corrEQE.copy()
 
@@ -538,7 +546,7 @@ class EQE(object):
         # plot EQE on top of a spectrum
         rnd2 = 100
 
-        fig, ax = plt.subplots()
+        _, ax = plt.subplots()
         ax.set_prop_cycle(color=Multi2T.junctioncolors[self.njuncs])
         for i in range(self.njuncs):
             rlns = ax.plot(self.xEQE, self.rawEQE[:, i], lw=1, ls="--", marker="", label="_" + self.sjuncs[i])

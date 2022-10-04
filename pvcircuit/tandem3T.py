@@ -6,22 +6,20 @@ This is the PVcircuit Package.
 
 import copy
 import math  # simple math
+import os
 from time import time
 
 import ipywidgets as widgets
 import matplotlib as mpl  # plotting
 import matplotlib.pyplot as plt  # plotting
 import numpy as np  # arrays
-import pandas as pd
-# from scipy.special import lambertw, gammaincc, gamma   #special functions
-import scipy.constants as con  # physical constants
-from IPython.display import display
 from scipy.interpolate import interp1d
 from scipy.optimize import brentq  # root finder
 
-from pvcircuit.iv3T import *
-from pvcircuit.junction import *
-from pvcircuit.multi2T import *
+from pvcircuit import junction
+from pvcircuit.iv3T import IV3T
+from pvcircuit.junction import Junction
+from pvcircuit.multi2T import Multi2T
 
 
 class Tandem3T(object):
@@ -31,11 +29,11 @@ class Tandem3T(object):
 
     update_now = True
 
-    def __init__(self, name="Tandem3T", TC=TC_REF, Rz=1, Eg_list=[1.8, 1.4], pn=[-1, 1], Jext=0.014):
+    def __init__(self, name="Tandem3T", TC=junction.TC_REF, Rz=1, Eg_list=[1.8, 1.4], pn=[-1, 1], Jext=0.014):
         # user inputs
         # default s-type n-on-p
 
-        update_now = False
+        # update_now = False #TODO remove
 
         self.ui = None
         self.Vax = None
@@ -50,7 +48,6 @@ class Tandem3T(object):
         self.top = Junction(name="top", Eg=Eg_list[0], TC=TC, Jext=Jext, pn=pn[0], beta=0.0)
         self.bot = Junction(name="bot", Eg=Eg_list[1], TC=TC, Jext=Jext, pn=pn[1])
 
-        update_now = True
 
     def copy(self):
         """
@@ -89,8 +86,8 @@ class Tandem3T(object):
         if self.ui:  # Tandem3T user interface has been created
             Boxes = self.ui.children
             for cntrl in Boxes[2].children:  # Multi2T controls
-                desc = cntrl._trait_values.get("description", "nodesc")  # does not fail when not present
-                cval = cntrl._trait_values.get("value", "noval")  # does not fail when not present
+                desc = cntrl.trait_values().get("description", "nodesc")  # does not fail when not present
+                cval = cntrl.trait_values().get("value", "noval")  # does not fail when not present
                 if desc in ["name", "Rz"]:  # Multi2T controls to update
                     key = desc
                     attrval = getattr(self, key)  # current value of attribute
@@ -168,7 +165,7 @@ class Tandem3T(object):
 
         # i = 0
         # for index in np.ndindex(iv3T.shape):
-        for i, index in enumerate(np.ndindex(iv3T.shape)):
+        for i, _ in enumerate(np.ndindex(iv3T.shape)):
             # for Ito, Iro, Izo in zip(iv3T.Ito.flat, iv3T.Iro.flat, iv3T.Izo.flat):
             # loop through points
 
@@ -254,7 +251,7 @@ class Tandem3T(object):
 
         # i = 0
         # for index in np.ndindex(iv3T.shape):
-        for i, index in enumerate(np.ndindex(iv3T.shape)):
+        for i, _ in enumerate(np.ndindex(iv3T.shape)):
             # for Vz, Vr, Vt in zip(iv3T.Vzt.flat, iv3T.Vrz.flat, iv3T.Vtr.flat):
             # loop through points
             # ABSOLUTE (Vz,Vr,Vt) mapped <- iv3T.(Vzt,Vrz,Vtr)
@@ -374,7 +371,7 @@ class Tandem3T(object):
 
         # i = 0
         # for index in np.ndindex(iv3T.shape):
-        for i, index in enumerate(np.ndindex(iv3T.shape)):
+        for i, _ in enumerate(np.ndindex(iv3T.shape)):
             # for Vzt, Vrz in zip(iv3T.Vzt.flat, iv3T.Vrz.flat):
             # loop through points
 
@@ -403,7 +400,7 @@ class Tandem3T(object):
             # iterate with varying Vz
             # bracket
             Vmin = 0.5
-            if math.isfinite(Vzmax) and (abs(Vzmax) > VTOL):
+            if math.isfinite(Vzmax) and (abs(Vzmax) > junction.VTOL):
                 Vlo = min(0, 1.2 * Vzmax)
                 Vhi = max(0, 1.2 * Vzmax)
             else:
@@ -435,9 +432,9 @@ class Tandem3T(object):
                         Vlo,
                         Vhi,
                         args=(Vzt, Vrz, temp3T),
-                        xtol=VTOL,
-                        rtol=EPSREL,
-                        maxiter=MAXITER,
+                        xtol=junction.VTOL,
+                        rtol=junction.EPSREL,
+                        maxiter=junction.MAXITER,
                         full_output=False,
                         disp=True,
                     )
@@ -447,7 +444,7 @@ class Tandem3T(object):
                     Jzo = temp3T.Izo[0]
                     Jto = temp3T.Ito[0]
 
-                except:
+                except ValueError:
                     Jro = np.nan
                     Jzo = np.nan
                     Jto = np.nan
@@ -640,7 +637,7 @@ class Tandem3T(object):
         lnr = IV3T(name="lnMPPr", meastype=meastype, area=self.lightarea)
 
         if bplot:
-            fig, ax = plt.subplots()
+            _, ax = plt.subplots()
             ax.axhline(0, color="gray")
             ax.axvline(0, color="gray")
             ax.set_title(self.name + " MPP calc.")
@@ -760,7 +757,7 @@ class Tandem3T(object):
                 # pt=self.VIpoint('Vtr','Vrz','Izo',meastype=meastype)
                 pt.nanpnt(0)
             else:  # s-type
-                dev2T = Multi2T.copy3T(self)
+                dev2T = Multi2T.from_3T(self)
                 pt.Iro[0] = dev2T.I2T(pt.Vtr[0])
                 pt.Ito[0] = -pt.Iro[0]
             self.V3T(pt)  # calc Vs from Is
@@ -769,7 +766,7 @@ class Tandem3T(object):
             pt.nanpnt(0)
 
         te = time()
-        dt = te - ts
+        # dt = te - ts
         # print('VI0: ' + pt.name + ' {0:2.4f} s'.format(dt))
 
         return pt
@@ -786,27 +783,27 @@ class Tandem3T(object):
             Voc3 = self.Voc3(meastype)
             x0 = getattr(Voc3, varykey)[0]
             dx = 1
-            abs_tol = 1e-5  # .01 mA
+            # abs_tol = 1e-5  # .01 mA #TODO remove
         else:
             Isc3 = self.Isc3(meastype)
             x0 = getattr(Isc3, varykey)[0]
             # dx = abs(getattr(Isc3, 'Izo')[0])
             dx = 0.1
-            abs_tol = 1e-3  # 1 mV
+            # abs_tol = 1e-3  # 1 mV #TODO remove
 
         ln = IV3T(name="ln" + zerokey + "_0", meastype=meastype, area=self.lightarea)
 
         growth = pnts - 1.0
 
         if bplot:
-            fig, ax = plt.subplots()
+            _, ax = plt.subplots()
             ax.axhline(0, color="gray")
             ax.set_title("VIpoint: " + zerokey + crosskey + "  " + zerokey + "=0")
             ax.set_xlabel(varykey)
             ax.set_ylabel(crosskey)
             ax.plot(x0, 0, marker="o", fillstyle="none", ms=8, color="black")
 
-        for i in range(4):
+        for _ in range(4):
             if bplot:
                 print("x0 =", x0)
             ln.line(varykey, x0 - dx, x0 + dx, pnts, zerokey, "0")
@@ -820,7 +817,7 @@ class Tandem3T(object):
             try:
                 fn_interp = interp1d(yy, xx)  # scipy interpolate function
                 xguess = fn_interp(0.0)
-            except:
+            except ValueError:
                 xguess = np.interp(0.0, yy, xx)  # y=zero crossing
             if not np.isnan(xguess):
                 x0 = xguess
@@ -1134,7 +1131,7 @@ class Tandem3T(object):
             tD = time()
 
             if desc == "savefig":
-                outpath = newoutpath(self.name)
+                outpath = junction.newoutpath(self.name)
                 strout = str(self)
                 with open(os.path.join(outpath, self.name + ".txt"), "wt") as fout:
                     fout.write(strout)

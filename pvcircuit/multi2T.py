@@ -13,12 +13,9 @@ import ipywidgets as widgets
 import matplotlib.pyplot as plt  # plotting
 import numpy as np  # arrays
 import pandas as pd
-# from scipy.special import lambertw, gammaincc, gamma   #special functions
-import scipy.constants as con  # physical constants
-from IPython.display import display
-from scipy.optimize import brentq  # root finder
 
-from pvcircuit.junction import *
+from pvcircuit import junction
+from pvcircuit.junction import Junction
 
 
 class Multi2T(object):
@@ -39,13 +36,25 @@ class Multi2T(object):
     ]  # 6J
 
     def __init__(
-        self, name="Multi2T", TC=TC_REF, Rs2T=0.0, area=1.0, Jext=0.014, Eg_list=[1.8, 1.4], n=[1, 2], J0ratio=None, J0ref=None
+        self,
+        name="Multi2T",
+        TC=junction.TC_REF,
+        Rs2T=0.0,
+        area=1.0,
+        Jext=0.014,
+        Eg_list=[1.8, 1.4],
+        n=[1, 2],
+        J0ratio=None,
+        J0ref=None,
     ):
         # user inputs
         # note n and J0ratio much be same size
 
         self.update_now = False
         self.ui = None
+        
+        self.Vpoints = None
+        self.Ipoints = None
 
         self.debugout = widgets.Output()  # debug output
         # self.debugout.layout.height = '400px'
@@ -53,7 +62,7 @@ class Multi2T(object):
         self.name = name
         self.Rs2T = Rs2T
         self.njuncs = len(Eg_list)
-        CM = 0.03 / self.njuncs
+        # CM = 0.03 / self.njuncs #TODO remove
         self.Vmid = np.full(self.njuncs, np.nan, dtype=np.float64)  # subcell voltages
         self.j = list()  # empty list of junctions
         for i, Eg in enumerate(Eg_list):
@@ -72,7 +81,8 @@ class Multi2T(object):
 
         return copy.copy(self)
 
-    def copy3T(dev3T, copy=True):
+    @classmethod
+    def from_3T(cls, dev3T, copy_attributes=True):
         """
         create a Multi2T object that contains the values from a Tandem3T object
         input dev3T is Tandem3T object
@@ -81,10 +91,10 @@ class Multi2T(object):
         top = dev3T.top
         bot = dev3T.bot
 
-        dev2T = Multi2T(name=dev3T.name, TC=dev3T.TC, Eg_list=[top.Eg, bot.Eg])
+        dev2T = cls(name=dev3T.name, TC=dev3T.TC, Eg_list=[top.Eg, bot.Eg])
         dev2T.set(Rs2T=(top.Rser * top.totalarea + bot.Rser * bot.totalarea) / dev3T.totalarea)
 
-        if copy:
+        if copy_attributes:
             dev2T.j[0] = dev3T.top.copy()  # disconnected
             dev2T.j[1] = dev3T.bot.copy()
         else:
@@ -96,15 +106,16 @@ class Multi2T(object):
 
         return dev2T
 
-    def single(junc, copy=True):
+    @classmethod
+    def from_single_junction(cls, junc, copy_attributes=True):
         """
         create a 2T single junction cell from a Junction object
         from this you can calculate Voc, Jsc, MPP, plot, etc.
         """
-        dev2T = Multi2T(name=junc.name, TC=junc.TC, Eg_list=[junc.Eg])
+        dev2T = cls(name=junc.name, TC=junc.TC, Eg_list=[junc.Eg])
         dev2T.set(Rs2T=junc.Rser)
 
-        if copy:
+        if copy_attributes:
             dev2T.j[0] = junc.copy()  # disconnected
         else:
             dev2T.j[0] = junc  # dynamically connected
@@ -155,8 +166,8 @@ class Multi2T(object):
         if self.ui:  # Multi2T user interface has been created
             Boxes = self.ui.children
             for cntrl in Boxes[2].children:  # Multi2T controls
-                desc = cntrl._trait_values.get("description", "nodesc")  # does not fail when not present
-                cval = cntrl._trait_values.get("value", "noval")  # does not fail when not present
+                desc = cntrl.trait_values().get("description", "nodesc")  # does not fail when not present
+                cval = cntrl.trait_values().get("value", "noval")  # does not fail when not present
                 if desc in ["name", "Rs2T"]:  # Multi2T controls to update
                     key = desc
                     attrval = getattr(self, key)  # current value of attribute
@@ -230,7 +241,7 @@ class Multi2T(object):
 
     def Imaxrev(self):
         # find max rev-bias current (w/o Gsh or breakdown)
-        Voc = self.Voc()  # this also calculates JLC at Voc
+        # Voc = self.Voc()  # this also calculates JLC at Voc TODO Remove
         J0s = self.proplist("J0")
         Jphotos = self.proplist("Jphoto")
         Jmaxs = Jphotos + np.sum(J0s, axis=1)
@@ -271,7 +282,7 @@ class Multi2T(object):
                 Itrace.append(Iold)
 
             count += 1
-            if count > MAXITER:
+            if count > junction.MAXITER:
                 Iold = np.nan
                 break
 
@@ -284,7 +295,7 @@ class Multi2T(object):
         for junc in self.j:
             try:
                 value = getattr(junc, key)
-            except:
+            except AttributeError:
                 value = np.nan
 
             out.append(value)  # append scalar or array as list item
@@ -318,7 +329,7 @@ class Multi2T(object):
 
         else:
             if bplot:  # debug plot
-                fig, ax = plt.subplots()
+                _, ax = plt.subplots()
                 ax.axhline(0, color="gray")
                 ax.axvline(0, color="gray")
                 ax.set_title(self.name + " MPP")
@@ -327,7 +338,7 @@ class Multi2T(object):
                 axr = ax.twinx()
                 axr.set_ylabel("Power (W)", c="cyan")
 
-            for i in range(5):
+            for _ in range(5):
                 Itemp = np.linspace(Ilo, Ihi, pnts)
                 Vtemp = np.array([self.V2T(I) for I in Itemp])
                 Vtemp = V2Tvect(Itemp)
@@ -501,7 +512,7 @@ class Multi2T(object):
             dt = te - ts
 
             if desc == "savefig":
-                outpath = newoutpath(self.name)
+                outpath = junction.newoutpath(self.name)
 
                 strout = str(self)
                 strout += "\n\nMPP:" + str(MPP)

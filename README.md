@@ -210,10 +210,10 @@ Maximum of the contained Junction.totalareas
 ### Multi2T.copy()
 Create a copy of this Multi2T object
 
-### Multi2T.copy3T()
+### Multi2T.from_3T()
 Create a Multi2T object from a Tandem3T object
 
-### Multi2T.single(junc, copy=True)
+### Multi2T.from_single_junction(junc, copy=True)
 Create a Multi2T object from a Junction object
 
 ### Multi2T.set(\**kwargs)
@@ -520,7 +520,7 @@ oper: 'load2dev', 'dev2load', 'dev2hex', 'hex2dev' (not developed yet)
 
 meastype: 'CR','CT','CZ','CF' or swap the loads: 'CRo','CTo','CZo', 'CFo' 
 
-### IV3T.loadcsv(name, path, fileA, fileB, VorI, meastype, Iscale=1000.)
+### IV3T.from_csv(name, path, fileA, fileB, VorI, meastype, Iscale=1000.)
 import csv file as data table into iv3T object
 
 two 2D arrays with x and y index on top and left

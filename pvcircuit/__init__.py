@@ -1,14 +1,14 @@
 # -*- coding: utf-8 -*-
 """
-This is the PVcircuit Package. 
+This is the PVcircuit Package.
 Model tandem and multijunction solar cells
 Written by John Geisz at the National Renewable Energy Laboratory
 December, 2021
 Based on publications:
-    J. F. Geisz, et al., IEEE Journal of Photovoltaics 5, p. 1827 (2015). 
+    J. F. Geisz, et al., IEEE Journal of Photovoltaics 5, p. 1827 (2015).
     http://dx.doi.org/10.1109/JPHOTOV.2015.2478072
 
-    J. F. Geisz, et al., Cell Reports Physical Science 2, p. 100677 (2021). 
+    J. F. Geisz, et al., Cell Reports Physical Science 2, p. 100677 (2021).
     https://doi.org/10.1016/j.xcrp.2021.100677
 
 

@@ -660,8 +660,8 @@ class IV3T(object):
             setattr(self, outlist[2], outarray2)
 
         return 0
-
-    def loadcsv(name, path, fileA, fileB, VorI, meastype, Iscale=1000.0, area=1):
+    @classmethod
+    def from_csv(cls,name, path, fileA, fileB, VorI, meastype, Iscale=1000.0, area=1):
         """
         import csv file as data table into iv3T object
         two 2D arrays with x and y index on top and left
@@ -713,7 +713,7 @@ class IV3T(object):
             return 6
 
         # create iv3T class
-        iv3T = IV3T(name=name, meastype=meastype, area=area)
+        iv3T = cls(name=name, meastype=meastype, area=area)
         iv3T.box(xkey, x0 / indscale, x1 / indscale, xn, ykey, y0 / indscale, y1 / indscale, yn)
         # print(xkey, x0/indscale, x1/indscale, xn, ykey, y0/indscale, y1/indscale, yn)
 

@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
 """
-This is the PVcircuit Package. 
-    pvcircuit.Junction()   # properties and methods for each junction
+This is the PVcircuit Package.
+pvcircuit.Junction()
+properties and methods for each junction
 """
 
 import copy
@@ -12,13 +13,9 @@ from functools import lru_cache
 from time import time
 
 import ipywidgets as widgets
-import matplotlib.pyplot as plt  # plotting
 import numpy as np  # arrays
-import pandas as pd
-# from scipy.special import lambertw, gammaincc, gamma   #special functions
 import scipy.constants as con  # physical constants
-from IPython.display import display
-from parse import *
+from parse import parse
 from scipy.optimize import brentq  # root finder
 
 # constants
@@ -42,7 +39,7 @@ MAXITER = 1000
 GITpath = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
 
 
-@lru_cache(maxsize=100)
+# @lru_cache(maxsize=100)
 def TK(TC):
     return TC + con.zero_Celsius
 
@@ -50,7 +47,7 @@ def TK(TC):
 # convert degrees celcius to kelvin
 
 
-@lru_cache(maxsize=100)
+# @lru_cache(maxsize=100)
 def Vth(TC):
     return k_q * TK(TC)
 
@@ -70,7 +67,7 @@ def Jdb(TC, Eg):
 
 def timestamp(fmt="%y%m%d-%H%M%S", tm=None):
     # return a timestamp string with given format and epoch time
-    if tm == None:
+    if tm is None:
         tm = time()
     date_time = datetime.fromtimestamp(tm)
     return date_time.strftime(fmt)
@@ -83,7 +80,7 @@ def newoutpath(dname=None):
         if not os.path.exists(pvcoutpath):
             os.mkdir(pvcoutpath)
 
-        if dname == None:
+        if dname is None:
             dname = timestamp()
         else:
             dname += timestamp()
@@ -193,13 +190,13 @@ class Junction(object):
 
         strout += "\nlightA = {0:g} cm2, totalA = {1:g} cm2".format(self.lightarea, self.totalarea)
 
-        strout += "\npn = {0:d}, beta = {1:g}, gamma = {2:g}".format(self.pn, self.beta, self.gamma, self.JLC)
+        strout += "\npn = {0:d}, beta = {1:g}, gamma = {2:g}, JLC = {3:g}".format(self.pn, self.beta, self.gamma, self.JLC)
 
         strout += "\n {0:^5s} {1:^10s} {2:^10s}".format("n", "J0ratio", "J0(A/cm2)")
         strout += "\n {0:^5s} {1:^10.0f} {2:^10.3e}".format("db", 1.0, self.Jdb)
 
         i = 0
-        for ideality_factor, ratio, saturation_current in zip(self.n, self.J0ratio, self.J0):
+        for i,_ in enumerate(self.n):
             strout += "\n {0:^5.2f} {1:^10.2f} {2:^10.3e}".format(self.n[i], self.J0ratio[i], self.J0[i])
             i += 1
 
@@ -230,8 +227,8 @@ class Junction(object):
 
             cntrls = self.ui.children
             for cntrl in cntrls:
-                desc = cntrl._trait_values.get("description", "nodesc")  # control description
-                cval = cntrl._trait_values.get("value", "noval")  # control value
+                desc = cntrl.trait_values().get("description", "nodesc")  # control description
+                cval = cntrl.trait_values().get("value", "noval")  # control value
                 if desc == "nodesc" or cval == "noval":
                     break
                 elif desc.endswith("]") and desc.find("[") > 0:
@@ -248,8 +245,8 @@ class Junction(object):
                         cntrl.value = attrval
                 elif key in self.ARY_ATTR:  # Junction array controls to update
                     attrval = getattr(self, key)  # current value of attribute
-                    if type(ind) is int:
-                        if type(attrval) is np.ndarray:
+                    if isinstance(ind, int):
+                        if isinstance(attrval, np.ndarray):
                             if cval != attrval[ind]:
                                 with self.debugout:
                                     print("Jupdate: " + desc, attrval[ind])
@@ -303,10 +300,10 @@ class Junction(object):
             elif key == "RBB_dict":
                 self.__dict__[key] = value
             elif key in ["n", "J0ratio"]:  # diode parameters (array)
-                if type(ind) is int and np.isscalar(value):
+                if isinstance(ind, int) and np.isscalar(value):
                     attrval = getattr(self, key)  # current value of attribute
                     localarray = attrval.copy()
-                    if type(localarray) is np.ndarray:
+                    if isinstance(localarray, np.ndarray):
                         if ind < localarray.size:
                             localarray[ind] = np.float64(value)  # add new value
                             self.__dict__[key] = localarray
@@ -351,7 +348,7 @@ class Junction(object):
         # dynamically calculated J0(T)
         # return np.ndarray [J0(n0), J0(n1), etc]
 
-        if (type(self.n) is np.ndarray) and (type(self.J0ratio) is np.ndarray):
+        if (isinstance(self.n,np.ndarray)) and (isinstance(self.J0ratio, np.ndarray)):
             if self.n.size == self.J0ratio.size:
                 return (self.Jdb * self.J0scale) ** (1.0 / self.n) * self.J0ratio / self.J0scale
             else:
@@ -365,7 +362,7 @@ class Junction(object):
         return np.ndarray [J0(n0), J0(n1), etc]
         """
         J0ref = np.array(J0ref)
-        if (type(self.n) is np.ndarray) and (type(J0ref) is np.ndarray):
+        if (isinstance(self.n, np.ndarray)) and (isinstance(J0ref, np.ndarray)):
             if self.n.size == J0ref.size:
                 self.J0ratio = self.J0scale * J0ref / (self.Jdb * self.J0scale) ** (1.0 / self.n)
                 return 0  # success
@@ -418,10 +415,10 @@ class Junction(object):
         Jrec = np.float64(0.0)
         for ideality_factor, saturation_current in zip(self.n, self.J0):
             if ideality_factor > 0.0 and math.isfinite(saturation_current):
-                try:
-                    Jrec += saturation_current * (np.exp(Vdiode / self.Vth / ideality_factor) - 1.0)
-                except:
-                    continue
+                # try:
+                Jrec += saturation_current * (np.exp(Vdiode / self.Vth / ideality_factor) - 1.0)
+                # except ValueError:
+                    # continue
 
         return Jrec
 
@@ -505,7 +502,7 @@ class Junction(object):
                 full_output=False,
                 disp=True,
             )
-        except:
+        except ValueError:
             return np.nan
             # print("Exception:",err)
 
@@ -545,7 +542,7 @@ class Junction(object):
                 disp=True,
             )
 
-        except:
+        except ValueError:
             return np.nan
             # print("Exception:",err)
 
@@ -599,11 +596,11 @@ class Junction(object):
         in_pn = widgets.IntSlider(value=self.pn, min=-1, max=1, step=1, description="pn", layout=cell_layout)
 
         # linkages
-        arealink = widgets.jslink((in_lightarea, "value"), (in_totalarea, "min"))  # also jsdlink works
+        # arealink = widgets.jslink((in_lightarea, "value"), (in_totalarea, "min"))  # also jsdlink works
 
-        attr = ["name"] + self.ATTR.copy()
+        # attr = ["name"] + self.ATTR.copy()
         cntrls = [in_name, in_Eg, in_TC, in_Gsh, in_Rser, in_lightarea, in_totalarea, in_Jext, in_JLC, in_beta, in_gamma, in_pn]
-        sing_dict = dict(zip(attr, cntrls))
+        # sing_dict = dict(zip(attr, cntrls))
         # singout = widgets.interactive_output(self.set, sing_dict)  #all at once
 
         def on_juncchange(change):
@@ -628,12 +625,11 @@ class Junction(object):
         # diode array
         in_tit = widgets.Label(value="Junction", description="Junction")
         in_diodelab = widgets.Label(value="diodes:", description="diodes:")
-        diode_layout = widgets.Layout(flex_flow="column", align_items="center")
+        # diode_layout = widgets.Layout(flex_flow="column", align_items="center")
 
         cntrls.append(in_diodelab)
         in_n = []  # empty list of n controls
         in_ratio = []  # empty list of Jratio controls
-        hui = []
         diode_dict = {}
         for i in range(len(self.n)):
             in_n.append(

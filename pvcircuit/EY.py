@@ -1,42 +1,25 @@
 # -*- coding: utf-8 -*-
 """
-This is the PVcircuit Package. 
+This is the PVcircuit Package.
     pvcircuit.EY     use Ripalda's Tandem proxy spectra for energy yield
 """
 
 import glob
 import os
 from functools import lru_cache
-from pprint import pprint
-from time import time
 
-import ipywidgets as widgets
-import matplotlib.pyplot as plt  # plotting
 import numpy as np  # arrays
-import pandas as pd  # dataframes
-# from scipy.integrate import trapezoid
-import scipy.constants as con  # physical constants
-from IPython.display import display
-# from scipy.special import lambertw, gammaincc, gamma   #special functions
-from scipy.interpolate import interp1d
-from scipy.optimize import brentq  # root finder
+import pandas as pd
+from parse import parse
 from tandems import physicaliam, sandia_T
 
 import pvcircuit as pvc
-from pvcircuit.iv3T import *
-from pvcircuit.junction import *
-from pvcircuit.multi2T import *
-from pvcircuit.qe import *
-from pvcircuit.tandem3T import *
 
 #  from 'Tandems' project
 vectoriam = np.vectorize(physicaliam)
-GITpath = os.path.dirname(pvcpath)
+GITpath = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
 RIPpath = os.path.join(GITpath, "Tandems")  # assuming 'Tandems' is in parallel GitHub folders
 FARMpath = os.path.join(RIPpath, "FARMS-NIT-clustered-spectra-USA", "")
-
-# RIPpath = datapath.replace('/PVcircuit/data/','/Tandems/')  #assuming 'Tandems' is in parallel GitHub folders
-# FARMpath = RIPpath+"FARMS-NIT-clustered-spectra-USA/" #posix only
 
 # list of data locations
 clst_axis = glob.glob(FARMpath + "*axis.clusters.npz")
@@ -147,7 +130,7 @@ class TMY(object):
 
         self.tilt = tilt
         self.index = i
-        head, tail = os.path.split(clst[i])
+        _, tail = os.path.split(clst[i])
         self.name = tail.replace(".clusters.npz", "")
         # self.name =  clst[i].split("/")[-1][:-13]  #posix only
         self.longitude = float(self.name.split("_")[1])
@@ -179,14 +162,31 @@ class TMY(object):
         spec[:, -1] = 0
         self.Irradiance = np.array(spec.tolist()).transpose()  # transpose for integration with QE
 
+        # standard data
+        pvcpath = os.path.dirname(os.path.dirname(__file__))
+        datapath = os.path.join(pvcpath, "data", "")  # Data files here
+        # datapath = os.path.abspath(os.path.relpath('../data/', start=__file__))
+        # datapath = pvcpath.replace('/pvcircuit','/data/')
+        ASTMfile = os.path.join(datapath, "ASTMG173.csv")
+        dfrefspec = pd.read_csv(ASTMfile, index_col=0, header=2)
+
+        self.wvl = dfrefspec.index.to_numpy(dtype=np.float64, copy=True)
+
         # calculate from spectral proxy data only
-        self.SpecPower = np.trapz(self.Irradiance, x=wvl, axis=0)  # optical power of each spectrum
-        self.RefPower = np.trapz(pvc.qe.refspec, x=wvl, axis=0)  # optical power of each reference spectrum
+        self.SpecPower = np.trapz(self.Irradiance, x=self.wvl, axis=0)  # optical power of each spectrum
+        self.RefPower = np.trapz(pvc.qe.refspec, x=self.wvl, axis=0)  # optical power of each reference spectrum
         # self.SpecPower = PintMD(self.Irradiance)
         # self.RefPower = PintMD(pvc.qe.refspec)
         self.TempCell = sandia_T(self.SpecPower, self.Wind, self.Temp)
         self.inPower = self.SpecPower * self.NTime  # spectra power*(fractional time)
         self.YearlyEnergy = self.inPower.sum() * self.DayTime * 365.25 / 1000  # kWh/m2/yr
+
+        self.outPower = np.empty_like(self.inPower)  # initialize outPower
+
+        self.Jdbs = None
+        self.Egs = None
+        self.JscSTCs = None
+        self.Jscs = None
 
     def cellbandgaps(self, EQE, TC=25):
         # subcell Egs for a given EQE class
@@ -214,7 +214,7 @@ class TMY(object):
         # Outputs
         # - STCeff efficiency of cell under reference spectrum (space,global,direct)
 
-        bot, top, ratio, type3T = cellmodeldesc(model, oper)  # ncells does not matter here
+        bot, top, _, type3T = cellmodeldesc(model, oper)  # ncells does not matter here
 
         # calc reference spectra efficiency
         if iref == 0:
@@ -227,19 +227,18 @@ class TMY(object):
                 model.j[ijunc].set(Eg=self.Egs[ijunc], Jext=self.JscSTCs[iref, ijunc], TC=Tref)
             mpp_dict = model.MPP()  # oper ignored for 2T
             Pmax = mpp_dict["Pmp"] * 10.0
-            ratio = 0.0
         elif type3T in ["s", "r"]:  # Tandem3T
             model.top.set(Eg=self.Egs[0], Jext=self.JscSTCs[iref, 0], TC=Tref)
             model.bot.set(Eg=self.Egs[1], Jext=self.JscSTCs[iref, 1], TC=Tref)
             if oper == "MPP":
                 iv3T = model.MPP()
             elif oper == "CM":
-                ln, iv3T = model.CM()
+                _, iv3T = model.CM()
             elif oper[:2] == "VM":
-                ln, iv3T = model.VM(bot, top)
+                _, iv3T = model.VM(bot, top)
             else:
                 print(oper + " not valid")
-                iv3T = IV3T("bogus")
+                iv3T = pvc.iv3T.IV3T("bogus")
                 iv3T.Ptot[0] = 0
             Pmax = iv3T.Ptot[0] * 10.0
         else:
@@ -259,11 +258,10 @@ class TMY(object):
         # - EYeff energy yield efficiency = EY/YearlyEnergy
         # - EY energy yield of cell [kWh/m2/yr]
 
-        bot, top, ratio, type3T = cellmodeldesc(model, oper)  # ncells does not matter here
+        bot, top, _, type3T = cellmodeldesc(model, oper)  # ncells does not matter here
 
         # calc EY, etc
-        self.outPower = np.empty_like(self.inPower)  # initialize
-        for i in range(len(self.outPower)):
+        for i in range(len(self.inPower)):
             if type3T == "2T":  # Multi2T
                 for ijunc in range(model.njuncs):
                     model.j[ijunc].set(Eg=self.Egs[ijunc], Jext=self.Jscs[i, ijunc], TC=self.TempCell[i])
@@ -275,11 +273,11 @@ class TMY(object):
                 if oper == "MPP":
                     iv3T = model.MPP()
                 elif oper == "CM":
-                    ln, iv3T = model.CM()
+                    _, iv3T = model.CM()
                 elif oper[:2] == "VM":
-                    ln, iv3T = model.VM(bot, top)
+                    _, iv3T = model.VM(bot, top)
                 else:
-                    iv3T = IV3T("bogus")
+                    iv3T = pvc.iv3T.IV3T("bogus")
                     iv3T.Ptot[0] = 0
                 Pmax = iv3T.Ptot[0]
             else:
