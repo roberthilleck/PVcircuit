@@ -4,6 +4,7 @@ This is the PVcircuit Package.
     pvcircuit.EY     use Ripalda's Tandem proxy spectra for energy yield
 """
 
+import math
 import os
 from time import time
 
@@ -11,12 +12,14 @@ import ipywidgets as widgets
 import matplotlib as mpl
 import matplotlib.pyplot as plt  # plotting
 import numpy as np  # arrays
+import pandas as pd
 from parse import parse
 
 import pvcircuit as pvc
 from pvcircuit import junction
 from pvcircuit.iv3T import IV3T
 from pvcircuit.junction import Junction
+from pvcircuit.multi2T import Multi2T
 from pvcircuit.qe import EQE
 from pvcircuit.tandem3T import Tandem3T
 
@@ -25,7 +28,7 @@ class PlotsWithControls:
     def __init__(self, class_to_plot, *args, **kwargs) -> None:
 
         self.debugout = widgets.Output()  # debug output
-        
+
         self.VdataMPP = None
         self.IdataMPP = None
 
@@ -35,12 +38,16 @@ class PlotsWithControls:
             self.controls_3T(class_to_plot, *args, **kwargs)
         elif isinstance(class_to_plot, EQE):
             self.controls_qe(class_to_plot, *args, **kwargs)
+        elif isinstance(class_to_plot, Multi2T):
+            self.controls_2T(class_to_plot, *args, **kwargs)
+        else:
+            raise ValueError(f"cannot plot class {type(class_to_plot)}")
 
     def controls_junction(self, class_to_plot):
         """
         use interactive_output for GUI in IPython
         """
-        
+
         """
         use interactive_output for GUI in IPython
         """
@@ -77,7 +84,12 @@ class PlotsWithControls:
             value=class_to_plot.lightarea, base=10, min=-6, max=3.0, step=0.1, description="lightarea", layout=cell_layout
         )
         in_totalarea = widgets.FloatSlider(
-            value=class_to_plot.totalarea, min=class_to_plot.lightarea, max=1e3, step=0.1, description="totalarea", layout=cell_layout
+            value=class_to_plot.totalarea,
+            min=class_to_plot.lightarea,
+            max=1e3,
+            step=0.1,
+            description="totalarea",
+            layout=cell_layout,
         )
         in_beta = widgets.FloatSlider(
             value=class_to_plot.beta, min=0.0, max=50.0, step=0.1, description="beta", layout=cell_layout, readout_format=".2e"
@@ -193,7 +205,6 @@ class PlotsWithControls:
         # self.ui = ui  # make it an attribute
 
         return ui
-
 
     def controls_3T(
         self,
@@ -727,7 +738,7 @@ class PlotsWithControls:
             value = owner.value
             desc = owner.description
             # with self.debugout: print('Mcontrol: ' + desc + '->', value)
-            # self.set(**{desc:value})
+            # class_to_plot.set(**{desc:value})
 
         def on_EQEreplot(change):
             # change info
@@ -909,3 +920,461 @@ class PlotsWithControls:
 
         # return entire user interface, dark and light graph axes for tweaking
         # return ui, ax, rax
+
+    def controls_2T(self, class_to_plot):
+        """
+        use interactive_output for GUI in IPython
+        """
+        tand_layout = widgets.Layout(width="300px", height="40px")
+        vout_layout = widgets.Layout(width="180px", height="40px")
+        junc_layout = widgets.Layout(display="flex", flex_flow="row", justify_content="space-around")
+        multi_layout = widgets.Layout(display="flex", flex_flow="row", justify_content="space-around")
+
+        replot_types = [
+            widgets.widgets.widget_float.BoundedFloatText,
+            widgets.widgets.widget_int.BoundedIntText,
+            widgets.widgets.widget_int.IntSlider,
+            widgets.widgets.widget_float.FloatSlider,
+            widgets.widgets.widget_float.FloatLogSlider,
+        ]
+
+        def on_2Tchange(change):
+            # function for changing values
+            old = change["old"]  # old value
+            new = change["new"]  # new value
+            owner = change["owner"]  # control
+            value = owner.value
+            desc = owner.description
+            with self.debugout:
+                print("Mcontrol: " + desc + "->", value)
+            class_to_plot.set(**{desc: value})
+
+        def on_2Treplot(change):
+            # change info
+            fast = True
+            if type(change) is widgets.widgets.widget_button.Button:
+                owner = change
+                desc = owner.description
+            else:  # other controls
+                owner = change["owner"]  # control
+            desc = owner.description
+            if desc == "Recalc":
+                fast = False
+            elif desc == "savefig":
+                fast = False
+
+            # recalculate
+            ts = time()
+            Idark, Vdark, Vdarkmid = self.calcDark(class_to_plot)
+            Vlight, Ilight, Plight, Vlightmid, MPP = self.calcLight(class_to_plot, fast=fast)
+            Voc = MPP["Voc"]
+            Imax = class_to_plot.Imaxrev()
+            Eg_list = class_to_plot.proplist("Eg")  # list of Eg
+            Egmax = sum(Eg_list)
+            scale = 1000.0
+            fmtstr = "Fit:  Voc = {0:>5.3f} V, Isc = {1:>6.2f} mA, FF = {2:>4.1f}%, "
+            fmtstr += "Pmp = {3:>5.1f} mW, Vmp = {4:>5.3f} V, Imp = {5:>6.2f} mA"
+            fmtstr += ", Eff = {6:>5.2f} %"
+            outstr = fmtstr.format(
+                MPP["Voc"],
+                MPP["Isc"] * scale,
+                MPP["FF"] * 100,
+                MPP["Pmp"] * scale,
+                MPP["Vmp"],
+                MPP["Imp"] * scale,
+                (MPP["Pmp"] * scale / class_to_plot.lightarea),
+            )
+
+            # out_Voc.value = ('{0:>7.3f} V'.format(MPP['Voc']))
+            # out_Isc.value = ('{0:>7.2f} mA'.format(MPP['Isc']*scale))
+            # out_FF.value = ('{0:>7.1f}%'.format(MPP['FF']*100))
+            # out_Pmp.value = ('{0:>7.1f} mW'.format(MPP['Pmp']*scale))
+            # out_Vmp.value = ('{0:>7.3f} V'.format(MPP['Vmp']))
+            # out_Imp.value = ('{0:>7.2f} mA'.format(MPP['Imp']*scale))
+
+            VoutBox.clear_output()
+            with VoutBox:
+                print(outstr)
+
+            with Lout:  # left output device -> dark
+                # replot
+                if desc == "Eg":
+                    dax.set_xlim(right=Egmax * 1.1)
+                    dax.set_ylim(np.nanmin(abs(Idark)), np.nanmax(abs(Idark)))
+
+                lines = dax.get_lines()
+                for line in lines:
+                    linelabel = line.get_label()
+                    if linelabel in ["pdark", "ndark"]:
+                        if linelabel.startswith("p"):
+                            line.set_data(Vdark, Idark)
+                        elif linelabel.startswith("n"):
+                            line.set_data(Vdark, -Idark)
+                    elif linelabel.find("junction") >= 0:  # pjunction0, njunction0, etc
+                        for junc in range(class_to_plot.njuncs):
+                            if linelabel.endswith("junction" + str(junc)):
+                                if linelabel.startswith("p"):
+                                    line.set_data(Vdarkmid[:, junc], Idark)
+                                elif linelabel.startswith("n"):
+                                    line.set_data(Vdarkmid[:, junc], -Idark)
+
+            with Rout:  # right output device -> light
+                # replot
+                if desc == "Eg":
+                    lax.set_xlim(right=max(min(Egmax, Voc * 1.1), 0.1))
+                    lax.set_ylim(-Imax * 1.5 * scale, Imax * 1.5 * scale)
+                lines = lax.get_lines()
+                for line in lines:
+                    linelabel = line.get_label()
+                    if linelabel.find("dark") >= 0:
+                        line.set_data(Vdark, Idark * scale)
+                    elif linelabel.find("light") >= 0:
+                        line.set_data(Vlight, Ilight * scale)
+                    elif linelabel.find("points") >= 0:
+                        line.set_data(class_to_plot.Vpoints, class_to_plot.Ipoints * scale)
+                    elif linelabel.find("junction") >= 0:  # ljunction0, djunction0, etc
+                        for junc in range(class_to_plot.njuncs):
+                            if linelabel.endswith("junction" + str(junc)):
+                                if linelabel.startswith("d"):
+                                    line.set_data(Vdarkmid[:, junc], Idark * scale)
+                                elif linelabel.startswith("l"):
+                                    line.set_data(Vlightmid[:, junc], Ilight * scale)
+
+                    elif linelabel.find("light") >= 0:
+                        line.set_data(Vlight, Ilight * scale)
+                    elif linelabel.find("points") >= 0:
+                        line.set_data(class_to_plot.Vpoints, class_to_plot.Ipoints * scale)
+
+                if False:
+                    Jext_list = class_to_plot.proplist("Jext")  # remember list external photocurrents
+                    snote = "T = {0:.1f} C, Rs2T = {1:g} Ω cm2, A = {2:g} cm2".format(
+                        class_to_plot.TC, class_to_plot.Rs2T, class_to_plot.lightarea
+                    )
+                    snote += "\nEg = " + str(Eg_list) + " eV"
+                    snote += "\nJext = " + str(Jext_list * 1000) + " mA/cm2"
+                    snote += "\nVoc = {0:.3f} V, Isc = {1:.2f} mA/cm2\nFF = {2:.1f}%, Pmp = {3:.1f} mW".format(
+                        Voc, MPP["Isc"] * 1000, MPP["FF"] * 100, MPP["Pmp"] * 1000
+                    )
+                    kids = lax.get_children()
+                    for kid in kids:
+                        if kid.get_label() == "mpptext":
+                            kid.set(text=snote)
+
+            te = time()
+            dt = te - ts
+
+            if desc == "savefig":
+                outpath = junction.newoutpath(class_to_plot.name)
+
+                strout = str(class_to_plot)
+                # strout += "\n\nMPP:" + str(MPP)
+                with open(os.path.join(outpath, class_to_plot.name + ".txt"), "wt", encoding="utf8") as fout:
+                    fout.write(strout)
+
+                # save mathplotlib graphs
+                dax.get_figure().savefig(os.path.join(outpath, "dax.png"))
+                lax.get_figure().savefig(os.path.join(outpath, "lax.png"))
+
+                #TODO check for dimensions - export currently fails
+                # assemble data into 2D arrays then dataframes for saving
+                # npdark = np.column_stack((Idark, Vdark, Vdarkmid))
+                # dfdark = pd.DataFrame(data=npdark, index=None, columns=["Idark", "Vdark", "Vdarkmid"])
+                # dfdark.to_csv(os.path.join(outpath, "darkfit.csv"), index=False)
+
+                # nplight = np.column_stack((Vlight, Ilight, Plight, Vlightmid))
+                # dflight = pd.DataFrame(data=nplight, index=None, columns=["Vlight", "Ilight", "Plight", "Vlightmid"])
+                # dflight.to_csv(os.path.join(outpath, "lightfit.csv"), index=False)
+
+                # controls output
+                with VoutBox:
+                    print("Calc Time: {0:>6.2f} s".format(dt), "saved: " + outpath)
+            else:
+                with VoutBox:
+                    print("Calc Time: {0:>6.2f} s".format(dt))
+
+        # summary line
+        VoutBox = widgets.Output()
+        VoutBox.layout.height = "40px"
+        with VoutBox:
+            print("Summary")
+
+        # Left output -> dark
+        Lout = widgets.Output()
+        with Lout:  # output device
+            # print(desc, old, new)
+            if plt.isinteractive:
+                plt.ioff()
+                restart = True
+            else:
+                restart = False
+
+            dfig, dax = self.plot(class_to_plot, dark=True)
+            dfig.set_figheight(4)
+            dfig.show()
+            if restart:
+                plt.ion()
+
+        # Right output -> light
+        Rout = widgets.Output()
+        with Rout:  # output device
+            # print(desc, old, new)
+            if plt.isinteractive:
+                plt.ioff()
+                restart = True
+            else:
+                restart = False
+
+            lfig, lax = self.plot(class_to_plot, dark=False)
+            lfig.set_figheight(4)
+            lfig.show()
+            if restart:
+                plt.ion()
+
+        ToutBox = widgets.HBox([Lout, Rout], layout=junc_layout)
+
+        # numerical outputs
+        out_Voc = widgets.Text(value="Voc", description="Voc", disabled=True, layout=vout_layout)
+        out_Isc = widgets.Text(value="Isc", description="Isc", disabled=True, layout=vout_layout)
+        out_FF = widgets.Text(value="FF", description="FF", disabled=True, layout=vout_layout)
+        out_Pmp = widgets.Text(value="Pmp", description="Pmp", disabled=True, layout=vout_layout)
+        out_Vmp = widgets.Text(value="Vmp", description="Vmp", disabled=True, layout=vout_layout)
+        out_Imp = widgets.Text(value="Imp", description="Imp", disabled=True, layout=vout_layout)
+        # VoutBox = widgets.HBox([in_tit,out_Voc,out_Isc,out_FF,out_Pmp,out_Vmp,out_Imp])
+
+        # tandem3T controls
+        in_tit = widgets.Label(value="Multi2T: ", description="title")
+        in_name = widgets.Text(value=class_to_plot.name, description="name", layout=tand_layout, continuous_update=False)
+        in_Rs2T = widgets.FloatLogSlider(
+            value=class_to_plot.Rs2T, base=10, min=-6, max=3, step=0.01, description="Rs2T", layout=tand_layout, readout_format=".2e"
+        )
+        in_2Tbut = widgets.Button(description="Recalc", button_style="success", tooltip="slow calculations")
+        in_savefig = widgets.Button(description="savefig", button_style="success", tooltip="save figures")
+        tand_dict = {"name": in_name, "Rs2T": in_Rs2T}
+        # tandout = widgets.interactive_output(class_to_plot.set, tand_dict)
+        tand_ui = widgets.HBox([in_tit, in_name, in_Rs2T, in_2Tbut, in_savefig])
+
+        in_name.observe(on_2Tchange, names="value")  # update values
+        in_Rs2T.observe(on_2Tchange, names="value")  # update values
+
+        jui = []
+        # list of junction controls
+        for i in range(class_to_plot.njuncs):
+            jui.append(class_to_plot.j[i].controls())
+            kids = jui[i].children
+            for cntrl in kids:
+                if type(cntrl) in replot_types:
+                    cntrl.observe(on_2Treplot, names="value")  # replot
+        in_Rs2T.observe(on_2Treplot, names="value")  # replot
+        in_2Tbut.on_click(on_2Treplot)  # replot
+        in_savefig.on_click(on_2Treplot)  # replot
+
+        junc_ui = widgets.HBox(jui)
+
+        ui = widgets.VBox([ToutBox, VoutBox, tand_ui, junc_ui])
+        self.ui = ui
+        self.dax = dax
+        self.lax = lax
+        in_2Tbut.click()  # fill in MPP values
+
+        # return entire user interface, dark and light graph axes for tweaking
+        return ui, dax, lax
+
+    def calcDark(self, class_to_plot, hilog=3, pdec=5, timer=False):
+        # calc dark IV
+        ts = time()
+        Jext_list = class_to_plot.proplist("Jext")  # remember list external photocurrents
+        class_to_plot.set(Jext=0.0, JLC=0.0)  # turn lights off but don't update controls
+        Imax = class_to_plot.Imaxrev()  # in dark
+        lolog = math.floor(np.log10(Imax)) - 5
+        dpnts = (hilog - lolog) * pdec + 1
+        Ifor = np.logspace(hilog, lolog, num=dpnts)
+        Irev = np.logspace(lolog, hilog, num=dpnts) * (-1)
+        Idark = np.concatenate((Ifor, Irev), axis=None)
+        dpnts = Idark.size  # redefine
+        Vdark = np.full(dpnts, np.nan, dtype=np.float64)  # Vtotal
+        Vdarkmid = np.full((dpnts, class_to_plot.njuncs), np.nan, dtype=np.float64)  # Vmid[pnt, junc]
+        for ii, I in enumerate(Idark):
+            Vdark[ii] = class_to_plot.V2T(I)  # also sets class_to_plot.Vmid[i]
+            for junc in range(class_to_plot.njuncs):
+                Vdarkmid[ii, junc] = class_to_plot.Vmid[junc]
+        class_to_plot.set(Jext=Jext_list, JLC=0.0)  # turn lights back on but don't update controls
+        te = time()
+        ds = te - ts
+        if timer:
+            print(f"dark {ds:2.4f} s")
+
+        return Idark, Vdark, Vdarkmid
+
+    def calcLight(self, class_to_plot, pnts=21, Vmin=-0.5, timer=False, fast=False):
+        # calc light IV
+        Jext_list = class_to_plot.proplist("Jext")  # remember list external photocurrents
+        areas = class_to_plot.proplist("lightarea")  # list of junction areas
+        # Imax = max([j*a for j,a in zip(Jext_list,areas)])
+        Imax = class_to_plot.Imaxrev()
+        Eg_list = class_to_plot.proplist("Eg")  # list of Eg
+        Egmax = sum(Eg_list)
+
+        # ndarray functions
+        V2Tvect = np.vectorize(class_to_plot.V2T)
+        I2Tvect = np.vectorize(class_to_plot.I2T)
+
+        MPP = class_to_plot.MPP()  # calculate all just once
+        Voc = MPP["Voc"]
+
+        # vertical portion
+        ts = time()
+        IxI = np.linspace(-Imax, Imax * 2, pnts)
+        # VxI = V2Tvect(IxI)
+        VxI = np.full(pnts, np.nan, dtype=np.float64)  # Vtotal
+        VmidxI = np.full((pnts, class_to_plot.njuncs), np.nan, dtype=np.float64)  # Vmid[pnt, junc]
+        for ii, I in enumerate(IxI):
+            VxI[ii] = class_to_plot.V2T(I)  # also sets class_to_plot.Vmid[i]
+            for junc in range(class_to_plot.njuncs):
+                VmidxI[ii, junc] = class_to_plot.Vmid[junc]
+        te = time()
+        dsI = te - ts
+        if timer:
+            print(f"lightI {dsI:2.4f} s")
+
+        if fast:
+            Vlight = VxI
+            Ilight = IxI
+            Vlightmid = VmidxI
+        else:
+            # horizonal portion slow part
+            ts = time()
+            VxV = np.linspace(Vmin, Voc, pnts)
+            # IxV = I2Tvect(VxV)
+            IxV = np.full(pnts, np.nan, dtype=np.float64)  # Vtotal
+            VmidxV = np.full((pnts, class_to_plot.njuncs), np.nan, dtype=np.float64)  # Vmid[pnt, junc]
+            for ii, V in enumerate(VxV):
+                IxV[ii] = class_to_plot.I2T(V)  # also sets class_to_plot.Vmid[i]
+                for junc in range(class_to_plot.njuncs):
+                    VmidxV[ii, junc] = class_to_plot.Vmid[junc]
+            te = time()
+            dsV = te - ts
+            if timer:
+                print(f"lightV {dsV:2.4f} s")
+            # combine
+            Vboth = np.concatenate((VxV, VxI), axis=None)
+            Iboth = np.concatenate((IxV, IxI), axis=None)
+            Vbothmid = np.concatenate((VmidxV, VmidxI), axis=0)
+            # sort
+            p = np.argsort(Vboth)
+            Vlight = Vboth[p]
+            Ilight = Iboth[p]
+            Vlightmid = []
+            for junc in range(class_to_plot.njuncs):
+                Vlightmid.append(np.take_along_axis(Vbothmid[:, junc], p, axis=0))
+            Vlightmid = np.transpose(np.array(Vlightmid))
+
+        Plight = np.array([(-v * j) for v, j in zip(Vlight, Ilight)])
+        Vlight = np.array(Vlight)
+        Ilight = np.array(Ilight)
+
+        return Vlight, Ilight, Plight, Vlightmid, MPP
+
+    def plot(self, class_to_plot, title="", pplot=False, dark=None, pnts=21, Vmin=-0.5, lolog=-8, hilog=7, pdec=5, size="x-large"):
+        # plot a light IV of Multi2T
+
+        Jext_list = class_to_plot.proplist("Jext")  # remember list external photocurrents
+        areas = class_to_plot.proplist("lightarea")  # list of junction areas
+        # Imax = max([j*a for j,a in zip(Jext_list,areas)])
+        Imax = class_to_plot.Imaxrev()
+        Eg_list = class_to_plot.proplist("Eg")  # list of Eg
+        Egmax = sum(Eg_list)
+        scale = 1000.0
+
+        # ndarray functions
+        V2Tvect = np.vectorize(class_to_plot.V2T)
+        I2Tvect = np.vectorize(class_to_plot.I2T)
+
+        if class_to_plot.name:
+            title += class_to_plot.name
+
+        if dark == None:
+            if math.isclose(class_to_plot.Isc(), 0.0, abs_tol=1e-6):
+                dark = True
+            else:
+                dark = False
+
+        # calc dark IV
+        Idark, Vdark, Vdarkmid = self.calcDark(class_to_plot)
+
+        if not dark:
+            # calc light IV
+            Vlight, Ilight, Plight, Vlightmid, MPP = self.calcLight(class_to_plot)
+            Voc = MPP["Voc"]
+
+        if dark:
+            # dark plot
+            dfig, dax = plt.subplots()
+            dax.set_prop_cycle(color=class_to_plot.junctioncolors[class_to_plot.njuncs])
+            for junc in range(Vdarkmid.shape[1]):  # plot Vdiode of each junction
+                plns = dax.plot(Vdarkmid[:, junc], Idark, lw=2, label="pjunction" + str(junc))
+                dax.plot(Vdarkmid[:, junc], -Idark, lw=2, c=plns[0].get_color(), label="njunction" + str(junc))
+
+            dax.plot(Vdark, Idark, lw=2, c="black", label="pdark")  # IV curve
+            dax.plot(Vdark, -Idark, lw=2, c="black", label="ndark")  # IV curve
+
+            dax.set_yscale("log")  # logscale
+            dax.set_autoscaley_on(True)
+            dax.set_xlim(Vmin, Egmax * 1.1)
+            dax.grid(color="gray")
+            dax.set_title(class_to_plot.name + " Dark", size=size)  # Add a title to the axes.
+            dax.set_xlabel("Voltage (V)", size=size)  # Add an x-label to the axes.
+            dax.set_ylabel("Current (A)", size=size)  # Add a y-label to the axes.
+            # dax.legend()
+            return dfig, dax
+
+        else:
+            # light plot
+            lfig, lax = plt.subplots()
+            lax.set_prop_cycle(color=class_to_plot.junctioncolors[class_to_plot.njuncs])
+            if class_to_plot.njuncs > 1:
+                for junc in range(class_to_plot.njuncs):  # plot Vdiode of each junction
+                    dlns = lax.plot(Vdarkmid[:, junc], Idark * scale, marker="", ls="--", label="djunction" + str(junc))
+                    lax.plot(
+                        Vlightmid[:, junc], Ilight * scale, marker="", ls="-", c=dlns[0].get_color(), label="ljunction" + str(junc)
+                    )
+
+            lax.plot(Vdark, Idark * scale, lw=2, ls="--", c="black", label="dark")  # dark IV curve
+            lax.plot(Vlight, Ilight * scale, lw=2, c="black", label="light")  # IV curve
+            lax.plot(
+                class_to_plot.Vpoints, class_to_plot.Ipoints * scale, marker="x", ls="", ms=12, c="black", label="points"
+            )  # special points
+            if pplot:  # power curve
+                laxr = lax.twinx()
+                laxr.plot(Vlight, Plight * scale, ls="--", c="cyan", zorder=0, label="power")
+                laxr.set_ylabel("Power (mW)", c="cyan")
+            lax.set_xlim((Vmin - 0.1), max(min(Egmax, Voc * 1.1), 0.1))
+            lax.set_ylim(-Imax * 1.5 * scale, Imax * 1.5 * scale)
+            lax.set_title(class_to_plot.name + " Light", size=size)  # Add a title to the axes.
+            lax.set_xlabel("Voltage (V)", size=size)  # Add an x-label to the axes.
+            lax.set_ylabel("Current (mA)", size=size)  # Add a y-label to the axes.
+            lax.axvline(0, ls="--", c="gray", label="_vline")
+            lax.axhline(0, ls="--", c="gray", label="_hline")
+            # lax.legend()
+
+            if False:
+                # annotate
+                snote = "T = {0:.1f} C, Rs2T = {1:g} Ω cm2, A = {2:g} cm2".format(
+                    class_to_plot.TC, class_to_plot.Rs2T, class_to_plot.lightarea
+                )
+                snote += "\nEg = " + str(Eg_list) + " eV"
+                snote += "\nJext = " + str(Jext_list * 1000) + " mA/cm2"
+                snote += "\nVoc = {0:.3f} V, Isc = {1:.2f} mA/cm2\nFF = {2:.1f}%, Pmp = {3:.1f} mW".format(
+                    Voc, MPP["Isc"] * 1000, MPP["FF"] * 100, MPP["Pmp"] * 1000
+                )
+
+                # lax.text(Vmin+0.1,Imax/2,snote,zorder=5,bbox=dict(facecolor='white'))
+                lax.text(
+                    0.05,
+                    0.95,
+                    snote,
+                    verticalalignment="top",
+                    label="mpptext",
+                    bbox=dict(facecolor="white"),
+                    transform=lax.transAxes,
+                )
+            return lfig, lax
