@@ -310,28 +310,28 @@ class PlotsWithControls:
                 fmtstr += "(Iro = {3:>5.2f}, Izo = {4:>5.2f}, Ito = {5:>5.2f} mA)"
 
             VoutBox.clear_output()
-            if VdataMPP:
+            if self.VdataMPP:
                 outstr = (fmtstr + ",   Pmp = {6:>5.2f} mW/cm2").format(
-                    VdataMPP.Vzt[0],
-                    VdataMPP.Vrz[0],
-                    VdataMPP.Vtr[0],
-                    VdataMPP.Iro[0] * fscale,
-                    VdataMPP.Izo[0] * fscale,
-                    VdataMPP.Ito[0] * fscale,
-                    VdataMPP.Ptot[0] * fscale,
+                    self.VdataMPP.Vzt[0],
+                    self.VdataMPP.Vrz[0],
+                    self.VdataMPP.Vtr[0],
+                    self.VdataMPP.Iro[0] * fscale,
+                    self.VdataMPP.Izo[0] * fscale,
+                    self.VdataMPP.Ito[0] * fscale,
+                    self.VdataMPP.Ptot[0] * fscale,
                 )
                 with VoutBox:
                     print(outstr.replace("Fit:", "VData:"))
 
-            elif IdataMPP:
+            elif self.IdataMPP:
                 outstr = (fmtstr + ",   Pmp = {6:>5.2f} mW/cm2").format(
-                    IdataMPP.Vzt[0],
-                    IdataMPP.Vrz[0],
-                    IdataMPP.Vtr[0],
-                    IdataMPP.Iro[0] * fscale,
-                    IdataMPP.Izo[0] * fscale,
-                    IdataMPP.Ito[0] * fscale,
-                    IdataMPP.Ptot[0] * fscale,
+                    self.IdataMPP.Vzt[0],
+                    self.IdataMPP.Vrz[0],
+                    self.IdataMPP.Vtr[0],
+                    self.IdataMPP.Iro[0] * fscale,
+                    self.IdataMPP.Izo[0] * fscale,
+                    self.IdataMPP.Ito[0] * fscale,
+                    self.IdataMPP.Ptot[0] * fscale,
                 )
                 with VoutBox:
                     print(outstr.replace("Fit:", "IData:"))
@@ -568,7 +568,7 @@ class PlotsWithControls:
         if Idata3T:
             Iax, Iobjs = Idata3T.plot(**Iargs)  # plot data
             Ifit3T.plot(inplot=(Iax, Iobjs), cmap=None, ccont="red", **Iargs)  # append fit
-            IdataMPP = Idata3T.MPP()
+            self.IdataMPP = Idata3T.MPP()
         else:
             Iax, Iobjs = Ifit3T.plot(cmap=None, ccont="red", **Iargs)
 
@@ -622,7 +622,7 @@ class PlotsWithControls:
         if Vdata3T:
             Vax, Vobjs = Vdata3T.plot(**Vargs)  # plot data
             # Vfit3T.plot(inplot = (Vax, Vobjs), cmap=None, ccont='red', **Vargs) #append fit
-            VdataMPP = Vdata3T.MPP()
+            self.VdataMPP = Vdata3T.MPP()
         else:
             Vax, Vobjs = Vfit3T.plot(cmap=None, ccont="red", **Vargs)
 
@@ -710,6 +710,8 @@ class PlotsWithControls:
 
         ui = widgets.VBox([ToutBox, VoutBox, tand_ui, junc_ui])
         self.ui = ui
+        self.Vax = Vax
+        self.Iax = Iax
 
         return ui, Vax, Iax
 
