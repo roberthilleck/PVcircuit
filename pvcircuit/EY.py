@@ -100,7 +100,7 @@ def _calc_yield_async(i, bot, top, type3T, Jscs, Egs, TempCell, devlist, oper):
         elif oper[:2] == "VM":
             ln, iv3T = model.VM(bot, top)
         else:
-            iv3T = IV3T("bogus")
+            iv3T = pvc.iv3T.IV3T("bogus")
             iv3T.Ptot[0] = 0
         Pmax = iv3T.Ptot[0]
     else:
@@ -329,7 +329,7 @@ class TMY(object):
 
 class Meteo(object):
     """
-    Meteorologica environmental data and spectra
+    Meteorological environmental data and spectra
     """
 
     def __init__(self, wavelength, spectra, ambient_temperature, wind, daytime):
@@ -412,7 +412,7 @@ class Meteo(object):
                 ln, iv3T = model.VM(bot, top)
             else:
                 print(oper + " not valid")
-                iv3T = IV3T("bogus")
+                iv3T = pvc.iv3T.IV3T("bogus")
                 iv3T.Ptot[0] = 0
             Pmax = iv3T.Ptot[0] * 10.0
         else:
@@ -457,7 +457,7 @@ class Meteo(object):
                 elif oper[:2] == "VM":
                     ln, iv3T = model.VM(bot, top)
                 else:
-                    iv3T = IV3T("bogus")
+                    iv3T = pvc.iv3T.IV3T("bogus")
                     iv3T.Ptot[0] = 0
                 Pmax = iv3T.Ptot[0]
             else:
