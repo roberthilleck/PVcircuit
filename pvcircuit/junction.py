@@ -55,13 +55,29 @@ def Vth(TC):
 
 
 @lru_cache(maxsize=100)
-def Jdb(TC, Eg):
+def Jdb(TC, Eg, sigma = 0):
     # detailed balance saturation current
 
     EgkT = Eg / Vth(TC)
 
     # Jdb from Geisz et al.
-    return DB_PREFIX * TK(TC) ** 3.0 * (EgkT * EgkT + 2.0 * EgkT + 2.0) * np.exp(-EgkT)  # units from DB_PREFIX
+    # return DB_PREFIX * TK(TC) ** 3.0 * (EgkT * EgkT + 2.0 * EgkT + 2.0) * np.exp(-EgkT)  # units from DB_PREFIX
+
+    
+    # Jdb from Rau et al.
+    return (
+        DB_PREFIX
+        * TK(TC) ** 3.0
+        * (
+            EgkT * EgkT
+            + 2.0 * EgkT
+            + 2.0
+            - 2 * sigma**2 * Eg / (Vth(TC)) ** 3
+            - sigma**2 / (Vth(TC)) ** 2
+            + sigma**4 / (Vth(TC)) ** 4
+        )
+        * np.exp(-EgkT + sigma**2 / (2 * (Vth(TC)) ** 2))
+    )  # units from DB_PREFIX
 
 
 def timestamp(fmt="%y%m%d-%H%M%S", tm=None):
