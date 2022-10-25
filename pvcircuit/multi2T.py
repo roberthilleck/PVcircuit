@@ -156,26 +156,26 @@ class Multi2T(object):
         areas = self.proplist("totalarea")
         return max(areas)
 
-    def update(self):
-        # update Multi2T self.ui controls with manually entered values
+    # def update(self):
+    #     # update Multi2T self.ui controls with manually entered values
 
-        for junc in self.j:
-            junc.update()
+    #     for junc in self.j:
+    #         junc.update()
 
-        if self.ui:  # Multi2T user interface has been created
-            Boxes = self.ui.children
-            for cntrl in Boxes[2].children:  # Multi2T controls
-                desc = cntrl.trait_values().get("description", "nodesc")  # does not fail when not present
-                cval = cntrl.trait_values().get("value", "noval")  # does not fail when not present
-                if desc in ["name", "Rs2T"]:  # Multi2T controls to update
-                    key = desc
-                    attrval = getattr(self, key)  # current value of attribute
-                    if cval != attrval:
-                        # with self.debugout:
-                        #     print("Mupdate: " + key, attrval)
-                        cntrl.value = attrval
-                if desc == "Recalc":
-                    cntrl.click()  # click button
+    #     if self.ui:  # Multi2T user interface has been created
+    #         Boxes = self.ui.children
+    #         for cntrl in Boxes[2].children:  # Multi2T controls
+    #             desc = cntrl.trait_values().get("description", "nodesc")  # does not fail when not present
+    #             cval = cntrl.trait_values().get("value", "noval")  # does not fail when not present
+    #             if desc in ["name", "Rs2T"]:  # Multi2T controls to update
+    #                 key = desc
+    #                 attrval = getattr(self, key)  # current value of attribute
+    #                 if cval != attrval:
+    #                     # with self.debugout:
+    #                     #     print("Mupdate: " + key, attrval)
+    #                     cntrl.value = attrval
+    #             if desc == "Recalc":
+    #                 cntrl.click()  # click button
 
     def set(self, **kwargs):
         # controlled update of Multi2T attributes

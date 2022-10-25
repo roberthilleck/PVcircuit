@@ -31,6 +31,8 @@ class PlotsWithControls:
 
         self.VdataMPP = None
         self.IdataMPP = None
+        self.class_to_plot = class_to_plot
+        
 
         if isinstance(class_to_plot, Junction):
             self.controls_junction(class_to_plot)
@@ -712,6 +714,8 @@ class PlotsWithControls:
         self.ui = ui
         self.Vax = Vax
         self.Iax = Iax
+        self.uit = uit
+        self.uib = uib
 
         return ui, Vax, Iax
 
@@ -1383,13 +1387,12 @@ class PlotsWithControls:
             return lfig, lax
 
 
-    def update(self):
+    def update_junction(self,junction):
         # update Junction self.ui controls
-
         if self.ui:  # junction user interface has been created
-            if self.RBB_dict:
-                if self.RBB_dict["method"]:
-                    RBB_keys = list(self.RBB_dict.keys())
+            if junction.RBB_dict:
+                if junction.RBB_dict["method"]:
+                    RBB_keys = list(junction.RBB_dict.keys())
                 else:
                     RBB_keys = []
 
@@ -1405,14 +1408,14 @@ class PlotsWithControls:
                     key = desc
                     ind = None
 
-                if key in self.ATTR:  # Junction scalar controls to update
-                    attrval = getattr(self, key)  # current value of attribute
+                if key in junction.ATTR:  # Junction scalar controls to update
+                    attrval = getattr(junction, key)  # current value of attribute
                     if cval != attrval:
                         with self.debugout:
                             print("Jupdate: " + desc, attrval)
                         cntrl.value = attrval
-                elif key in self.ARY_ATTR:  # Junction array controls to update
-                    attrval = getattr(self, key)  # current value of attribute
+                elif key in junction.ARY_ATTR:  # Junction array controls to update
+                    attrval = getattr(junction, key)  # current value of attribute
                     if isinstance(ind, int):
                         if isinstance(attrval, np.ndarray):
                             if cval != attrval[ind]:
@@ -1420,8 +1423,51 @@ class PlotsWithControls:
                                     print("Jupdate: " + desc, attrval[ind])
                                 cntrl.value = attrval[ind]
                 elif key in RBB_keys:
-                    attrval = self.RBB_dict[key]
+                    attrval = junction.RBB_dict[key]
                     if cval != attrval:
                         with self.debugout:
                             print("Jupdate: " + desc, attrval)
                         cntrl.value = attrval
+    
+    def update_Multi2T(self):
+        # update Multi2T self.ui controls with manually entered values
+
+        for junc in self.class_to_plot.j:
+            self.update_junction(junc)
+
+        if self.ui:  # Multi2T user interface has been created
+            Boxes = self.ui.children
+            for cntrl in Boxes[2].children:  # Multi2T controls
+                desc = cntrl.trait_values().get("description", "nodesc")  # does not fail when not present
+                cval = cntrl.trait_values().get("value", "noval")  # does not fail when not present
+                if desc in ["name", "Rs2T"]:  # Multi2T controls to update
+                    key = desc
+                    attrval = getattr(self.class_to_plot, key)  # current value of attribute
+                    if cval != attrval:
+                        # with self.debugout:
+                        #     print("Mupdate: " + key, attrval)
+                        cntrl.value = attrval
+                if desc == "Recalc":
+                    cntrl.click()  # click button
+
+    def update_3T(self):
+        # update Tandem3T self.ui controls
+
+        # for junc in self.j:
+        for junc in [self.class_to_plot.top, self.class_to_plot.bot]:  # two junctions
+            self.update_junction(junc)
+
+        if self.ui:  # Tandem3T user interface has been created
+            Boxes = self.ui.children
+            for cntrl in Boxes[2].children:  # Multi2T controls
+                desc = cntrl.trait_values().get("description", "nodesc")  # does not fail when not present
+                cval = cntrl.trait_values().get("value", "noval")  # does not fail when not present
+                if desc in ["name", "Rz"]:  # Multi2T controls to update
+                    key = desc
+                    attrval = getattr(self.class_to_plot, key)  # current value of attribute
+                    if cval != attrval:
+                        # with self.debugout:
+                        #     print("Tupdate: " + key, attrval)
+                        cntrl.value = attrval
+                if desc == "Recalc":
+                    cntrl.click()  # click button

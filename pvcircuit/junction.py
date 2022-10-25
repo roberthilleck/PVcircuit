@@ -195,7 +195,7 @@ class Junction(object):
         strout += "\n {0:^5s} {1:^10.0f} {2:^10.3e}".format("db", 1.0, self.Jdb)
 
         i = 0
-        for i,_ in enumerate(self.n):
+        for i, _ in enumerate(self.n):
             strout += "\n {0:^5.2f} {1:^10.2f} {2:^10.3e}".format(self.n[i], self.J0ratio[i], self.J0[i])
             i += 1
 
@@ -210,7 +210,7 @@ class Junction(object):
     # """
     # def __setattr__(self, key, value):
     #     # causes problems
-    #     super(Junction, self).__setattr__(key, value) 
+    #     super(Junction, self).__setattr__(key, value)
     #     self.set(key = value)
     # """
 
@@ -347,7 +347,7 @@ class Junction(object):
         # dynamically calculated J0(T)
         # return np.ndarray [J0(n0), J0(n1), etc]
 
-        if (isinstance(self.n,np.ndarray)) and (isinstance(self.J0ratio, np.ndarray)):
+        if (isinstance(self.n, np.ndarray)) and (isinstance(self.J0ratio, np.ndarray)):
             if self.n.size == self.J0ratio.size:
                 return (self.Jdb * self.J0scale) ** (1.0 / self.n) * self.J0ratio / self.J0scale
             else:
@@ -417,7 +417,7 @@ class Junction(object):
                 # try:
                 Jrec += saturation_current * (np.exp(Vdiode / self.Vth / ideality_factor) - 1.0)
                 # except ValueError:
-                    # continue
+                # continue
 
         return Jrec
 

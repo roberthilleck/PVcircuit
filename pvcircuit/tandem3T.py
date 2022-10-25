@@ -75,27 +75,27 @@ class Tandem3T(object):
     def __repr__(self):
         return str(self)
 
-    def update(self):
-        # update Tandem3T self.ui controls
+    # def update(self):
+    #     # update Tandem3T self.ui controls
 
-        # for junc in self.j:
-        for junc in [self.top, self.bot]:  # two junctions
-            junc.update()
+    #     # for junc in self.j:
+    #     for junc in [self.top, self.bot]:  # two junctions
+    #         junc.update()
 
-        if self.ui:  # Tandem3T user interface has been created
-            Boxes = self.ui.children
-            for cntrl in Boxes[2].children:  # Multi2T controls
-                desc = cntrl.trait_values().get("description", "nodesc")  # does not fail when not present
-                cval = cntrl.trait_values().get("value", "noval")  # does not fail when not present
-                if desc in ["name", "Rz"]:  # Multi2T controls to update
-                    key = desc
-                    attrval = getattr(self, key)  # current value of attribute
-                    if cval != attrval:
-                        # with self.debugout:
-                        #     print("Tupdate: " + key, attrval)
-                        cntrl.value = attrval
-                if desc == "Recalc":
-                    cntrl.click()  # click button
+    #     if self.ui:  # Tandem3T user interface has been created
+    #         Boxes = self.ui.children
+    #         for cntrl in Boxes[2].children:  # Multi2T controls
+    #             desc = cntrl.trait_values().get("description", "nodesc")  # does not fail when not present
+    #             cval = cntrl.trait_values().get("value", "noval")  # does not fail when not present
+    #             if desc in ["name", "Rz"]:  # Multi2T controls to update
+    #                 key = desc
+    #                 attrval = getattr(self, key)  # current value of attribute
+    #                 if cval != attrval:
+    #                     # with self.debugout:
+    #                     #     print("Tupdate: " + key, attrval)
+    #                     cntrl.value = attrval
+    #             if desc == "Recalc":
+    #                 cntrl.click()  # click button
 
     def set(self, **kwargs):
         # controlled update of Tandem3T attributes
@@ -535,6 +535,7 @@ class Tandem3T(object):
         lnout.delete(ind)  # delete extraneous points from lnout
         MPP = lnout.MPP(name)  # single MPP point in IV3T space
 
+        # TODO needs externalization in PlottingWithControls
         # plot if possible
         pltargs = {"lw": 0, "ms": 7, "mew": 1, "mec": "black", "marker": "o", "zorder": 5}
         pltargs["label"] = name
@@ -594,6 +595,7 @@ class Tandem3T(object):
         lnout.delete(ind)  # delete extraneous points from lnout
         MPP = lnout.MPP(name)  # single MPP point in IV3T space
 
+        # TODO needs externalization in PlottingWithControls
         # plot if possible
         pltargs = {"lw": 0, "ms": 7, "mew": 1, "mec": "black", "marker": "o", "zorder": 5}
         pltargs["label"] = name
