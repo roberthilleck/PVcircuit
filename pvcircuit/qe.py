@@ -492,7 +492,7 @@ class EQE(object):
         """
 
         # check spectra input
-        if type(Pspec) is str:  # optional string space, global, direct
+        if isinstance(Pspec, str):  # optional string space, global, direct
             if Pspec in dfrefspec.columns:
                 Pspec = dfrefspec[Pspec].to_numpy(dtype=np.float64, copy=True)
             else:
