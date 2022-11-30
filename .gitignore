@@ -137,3 +137,7 @@ data/*
 
 # ignore vscode settings  
 *.json
+*.code-*
+
+# ignore bat
+*.bat
