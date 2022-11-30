@@ -205,7 +205,7 @@ class Junction(object):
 
         strout += "\nlightA = {0:g} cm2, totalA = {1:g} cm2".format(self.lightarea, self.totalarea)
 
-        strout += "\npn = {0:d}, beta = {1:g}, gamma = {2:g}, JLC = {3:g}".format(self.pn, self.beta, self.gamma, self.JLC)
+        strout += "\npn = {0:d}, beta = {1:g}, gamma = {2:g}".format(self.pn, self.beta, self.gamma)
 
         strout += "\n {0:^5s} {1:^10s} {2:^10s}".format("n", "J0ratio", "J0(A/cm2)")
         strout += "\n {0:^5s} {1:^10.0f} {2:^10.3e}".format("db", 1.0, self.Jdb)
