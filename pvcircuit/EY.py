@@ -13,13 +13,12 @@ from functools import lru_cache
 import numpy as np  # arrays
 import pandas as pd
 from parse import parse
-from tandems import physicaliam, sandia_T
 from tqdm.autonotebook import tqdm, trange
 
 import pvcircuit as pvc
 
 #  from 'Tandems' project
-vectoriam = np.vectorize(physicaliam)
+# vectoriam = np.vectorize(physicaliam)
 GITpath = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
 RIPpath = os.path.join(GITpath, "Tandems")  # assuming 'Tandems' is in parallel GitHub folders
 FARMpath = os.path.join(RIPpath, "FARMS-NIT-clustered-spectra-USA", "")
@@ -76,19 +75,36 @@ def VMlist(mmax):
             sVM.append("VM" + str(m) + str(n))
     return sVM
 
+def sandia_T(poa_global, wind_speed, temp_air):
+    """ Sandia solar cell temperature model
+    Adapted from pvlib library to avoid using pandas dataframes
+    parameters used are those of 'open_rack_cell_polymerback'
+    """
+
+    a = -3.56
+    b = -0.075
+    deltaT = 3
+
+    E0 = 1000.  # Reference irradiance
+
+    temp_module = poa_global * np.exp(a + b * wind_speed) + temp_air
+
+    temp_cell = temp_module + (poa_global / E0) * (deltaT)
+
+    return temp_cell
 
 def _calc_yield_async(i, bot, top, type3T, Jscs, Egs, TempCell, devlist, oper):
     model = devlist[i]
     if type3T == "2T":  # Multi2T
         for ijunc in range(model.njuncs):
             # model.j[ijunc].set(Eg=Egs[ijunc], Jext=Jscs[i, ijunc], TC=TempCell[i])
-            model.j[ijunc].set(Eg=Egs[ijunc], Jext=Jscs[i, ijunc], TC=25)
+            model.j[ijunc].set(Eg=Egs[i,ijunc], Jext=Jscs[i, ijunc], TC=25)
         mpp_dict = model.MPP()  # oper ignored for 2T
         Pmax = mpp_dict["Pmp"]
     elif type3T in ["s", "r"]:  # Tandem3T
-        model.top.set(Eg=Egs[0], Jext=Jscs[i, 0], TC=TempCell[i])
+        model.top.set(Eg=Egs[i,0], Jext=Jscs[i, 0], TC=TempCell[i])
         # model.top.set(Eg=Egs[0], Jext=Jscs[i, 0], TC=TempCell)
-        model.bot.set(Eg=Egs[1], Jext=Jscs[i, 1], TC=TempCell[i])
+        model.bot.set(Eg=Egs[i,1], Jext=Jscs[i, 1], TC=TempCell[i])
         # model.bot.set(Eg=Egs[1], Jext=Jscs[i, 1], TC=25)
         if oper == "MPP":
             tempRz = model.Rz
@@ -128,7 +144,7 @@ def cellmodeldesc(model, oper):
             type3T = "s"
 
         if oper == "MPP":
-            ratio = -0.5
+            ratio = -1.0
         elif oper == "CM":
             ratio = 0
         elif oper[:2] == "VM":
@@ -295,7 +311,7 @@ class TMY(object):
         bot, top, _, type3T = cellmodeldesc(model, oper)  # ncells does not matter here
 
         # calc EY, etc
-        for i in trange(len(self.inPower)):
+        for i in trange(len(self.inPower), leave=True, desc='single core'):
             if type3T == "2T":  # Multi2T
                 for ijunc in range(model.njuncs):
                     model.j[ijunc].set(Eg=self.Egs[ijunc], Jext=self.Jscs[i, ijunc], TC=self.TempCell[i])
@@ -352,12 +368,17 @@ class Meteo(object):
 
         self.ref_wvl = dfrefspec.index.to_numpy(dtype=np.float64, copy=True)
         
-        # calculate from spectral proxy data only
+         # calculate from spectral proxy data only
         self.SpecPower = np.trapz(spectra, x=wavelength)  # optical power of each spectrum
         self.RefPower = np.trapz(pvc.qe.refspec, x=self.ref_wvl, axis=0)  # optical power of each reference spectrum
         self.TempCell = sandia_T(self.SpecPower, self.wind, self.temp)
         self.inPower = self.SpecPower  # * self.NTime  # spectra power*(fractional time)
-        self.EnergyIn = np.trapz(self.SpecPower, self.daytime.values.astype(int)) / 1e9 / 60  # kWh/m2/yr
+        self.outPower = None
+        # construct a results dataframe for better handling
+        self.models=[]
+        self.operation_modes=[]
+        self.tandem_types=[]
+        self.EnergyIn = np.trapz(self.SpecPower, self.daytime.values.astype(np.int64)) / 1e9 / 60  # kWh/m2/yr
 
     def cellbandgaps(self, EQE, TC=25):
         # subcell Egs for a given EQE class
@@ -393,13 +414,13 @@ class Meteo(object):
 
         if type3T == "2T":  # Multi2T
             for ijunc in range(model.njuncs):
-                model.j[ijunc].set(Eg=self.Egs[ijunc], Jext=self.JscSTCs[iref, ijunc], TC=Tref)
+                model.j[ijunc].set(TC=Tref)
             mpp_dict = model.MPP()  # oper ignored for 2T
             Pmax = mpp_dict["Pmp"] * 10.0
             ratio = 0.0
         elif type3T in ["s", "r"]:  # Tandem3T
-            model.top.set(Eg=self.Egs[0], Jext=self.JscSTCs[iref, 0], TC=Tref)
-            model.bot.set(Eg=self.Egs[1], Jext=self.JscSTCs[iref, 1], TC=Tref)
+            model.top.set(TC=Tref)
+            model.bot.set(TC=Tref)
             if oper == "MPP":
                 tempRz = model.Rz
                 model.set(Rz=0)
@@ -435,18 +456,18 @@ class Meteo(object):
         bot, top, ratio, type3T = cellmodeldesc(model, oper)  # ncells does not matter here
 
         # calc EY, etc
-        self.outPower = np.empty_like(self.inPower)  # initialize
+        outPower = np.empty((self.inPower.shape[0],1))  # initialize
 
-        for i in trange(len(self.outPower)):
+        for i in trange(len(outPower)):
 
             if type3T == "2T":  # Multi2T
                 for ijunc in range(model.njuncs):
-                    model.j[ijunc].set(Eg=self.Egs[ijunc], Jext=self.Jscs[i, ijunc], TC=self.TempCell[i])
+                    model.j[ijunc].set(Eg=self.Egs[i, ijunc], Jext=self.Jscs[i, ijunc], TC=self.TempCell[i])
                 mpp_dict = model.MPP()  # oper ignored for 2T
                 Pmax = mpp_dict["Pmp"]
             elif type3T in ["s", "r"]:  # Tandem3T
-                model.top.set(Eg=self.Egs[0], Jext=self.Jscs[i, 0], TC=self.TempCell[i])
-                model.bot.set(Eg=self.Egs[1], Jext=self.Jscs[i, 1], TC=self.TempCell[i])
+                model.top.set(Eg=self.Egs[i, 0], Jext=self.Jscs[i, 0], TC=self.TempCell[i])
+                model.bot.set(Eg=self.Egs[i, 1], Jext=self.Jscs[i, 1], TC=self.TempCell[i])
                 if oper == "MPP":
                     tempRz = model.Rz
                     model.set(Rz=0)
@@ -463,9 +484,19 @@ class Meteo(object):
             else:
                 Pmax = 0.0
 
-            self.outPower[i] = Pmax * 10000
+            outPower[i] = Pmax * 10000
 
-        EnergyOut = np.trapz(self.outPower, self.daytime.values.astype(int)) / 1e9 / 60  # kWh/m2/yr
+        if self.outPower is None:
+            self.outPower = outPower
+        elif self.outPower.shape[0] == outPower.shape[0]:
+            self.outPower = np.concatenate([self.outPower, outPower], axis=1)
+
+        self.models.append(model)
+        self.operation_modes.append(oper)
+        self.tandem_types.append(type3T)
+        
+        # EnergyOut = np.trapz(self.outPower, self.daytime.values.astype(int)) / 1e9 / 60  # kWh/m2/yr
+        EnergyOut = np.trapz(outPower, self.daytime.values.astype(np.int64), axis=0) / 1e9 / 60  # kWh/m2/yr
         EYeff = EnergyOut / self.EnergyIn
 
         return EnergyOut, EYeff
@@ -486,8 +517,8 @@ class Meteo(object):
         outPowerMP = np.empty_like(self.inPower)  # initialize
 
         cpu_count = mp.cpu_count()
-        print(f"running multiprocess wiht {cpu_count} pools")
-        with tqdm(total=len(self.inPower)) as pbar:
+        print(f"running multiprocess with {cpu_count} pools")
+        with tqdm(total=len(self.inPower), leave=True, desc = f"Multi processing {oper}") as pbar:
 
             dev_list = [copy.deepcopy(model) for _ in range(len(self.Jscs))]
             with mp.Pool(cpu_count) as pool:
@@ -504,6 +535,6 @@ class Meteo(object):
                 
         self.outPowerMP = results
 
-        EnergyOut = np.trapz(self.outPowerMP, self.daytime.values.astype(int)) / 1e9 / 60  # kWh/m2/yr
+        EnergyOut = np.trapz(self.outPowerMP, self.daytime.values.astype(np.int64)) / 1e9 / 60  # kWh/m2/yr
         EYeff = EnergyOut / self.EnergyIn
         return EnergyOut, EYeff
