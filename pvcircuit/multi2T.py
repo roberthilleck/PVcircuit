@@ -201,7 +201,7 @@ class Multi2T(object):
                 junc.set(**jikwargs)
 
         # remaining Multi2T kwargs
-        for key, value in kwargs.items():
+        for key, value in kwargs.items():            
             if key == "name":
                 self.__dict__[key] = str(value)
             elif key == "njuncs":
@@ -212,6 +212,9 @@ class Multi2T(object):
                 self.__dict__[key] = value
             elif key in ["Rs2T"]:
                 self.__dict__[key] = np.float64(value)
+            # raise error if the key is not in the class attributes
+            elif not key in list(self.__dict__.keys()):
+                raise ValueError(f"invalid class attribute {key}")
 
     def V2T(self, I):
         """

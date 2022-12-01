@@ -330,6 +330,10 @@ class Junction(object):
                     #     print("array", key, value)
             elif key in self.ATTR:  # scalar float
                 self.__dict__[key] = np.float64(value)
+                
+            # raise error if the key is not in the class attributes
+            elif not key in list(self.__dict__.keys()):
+                raise ValueError(f"invalid class attribute {key}")
                 # with self.debugout:
                 #     print("ATTR", key, value)
             # else:

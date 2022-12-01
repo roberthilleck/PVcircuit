@@ -186,13 +186,17 @@ class IV3T(object):
         """
         set variables
         """
-        for key, value in kwargs.items():
+        for key, value in kwargs.items():            
             if key in set(self.arraykeys):  # this should be numpy.ndarray
                 if np.isscalar(value):  # value = scalar
                     # shape = getattr(self, key).size
                     setattr(self, key, np.full(self.shape, value, dtype=np.float64))
                 else:  # value = full array
                     setattr(self, key, np.array(value))
+                
+            # raise error if the key is not in the class attributes
+            elif not key in list(self.__dict__.keys()):
+                raise ValueError(f"invalid class attribute {key}")            
             else:
                 setattr(self, key, value)
 
