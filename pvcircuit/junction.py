@@ -199,7 +199,7 @@ class Junction(object):
 
         strout += "\nEg = {0:.2f} eV, TC = {1:.1f} C".format(self.Eg, self.TC)
 
-        strout += "\nJext = {0:.1f} , JLC = {1:.1f} mA/cm2".format(self.Jext * 1000.0, self.JLC * 1000.0)
+        strout += "\nJext = {0:.1f} mA/cm2, JLC = {1:.1f} mA/cm2".format(self.Jext * 1000.0, self.JLC * 1000.0)
 
         strout += "\nGsh = {0:g} S/cm2, Rser = {1:g} Ωcm2".format(self.Gsh, self.Rser)
 
