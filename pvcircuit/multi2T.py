@@ -342,7 +342,7 @@ class Multi2T(object):
 
             for _ in range(5):
                 Itemp = np.linspace(Ilo, Ihi, pnts)
-                Vtemp = np.array([self.V2T(I) for I in Itemp])
+                # Vtemp = np.array([self.V2T(I) for I in Itemp])
                 Vtemp = V2Tvect(Itemp)
                 Ptemp = np.array([(-v * j) for v, j in zip(Vtemp, Itemp)])
                 nmax = np.argmax(Ptemp)
