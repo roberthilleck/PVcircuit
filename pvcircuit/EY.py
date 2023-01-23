@@ -204,9 +204,9 @@ class TMY(object):
 
         aoi = spec[:, 5] * 1e6
         self.Angle = np.array(aoi.tolist())
-        aim = vectoriam(aoi)
+        # aim = vectoriam(aoi)
         #        aim = physicaliam(aoi)
-        self.AngleMOD = np.array(aim.tolist())
+        # self.AngleMOD = np.array(aim.tolist())
 
         spec[:, :5] = 0
         spec[:, -1] = 0
