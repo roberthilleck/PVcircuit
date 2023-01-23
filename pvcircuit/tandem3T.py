@@ -596,7 +596,10 @@ class Tandem3T(object):
             else:  # not finite
                 ind.append(i)
         lnout.delete(ind)  # delete extraneous points from lnout
-        MPP = lnout.MPP(name)  # single MPP point in IV3T space
+        if lnout.shape[0] > 0:
+            MPP = lnout.MPP(name)  # single MPP point in IV3T space
+        else:
+            return lnout, IV3T(name = "bogus", meastype=meastype, shape=1, area=self.lightarea)
 
         # TODO needs externalization in PlottingWithControls
         # plot if possible
