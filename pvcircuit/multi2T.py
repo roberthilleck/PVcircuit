@@ -4,6 +4,8 @@ This is the PVcircuit Package.
     pvcircuit.Multi2T()    # properties of a 2T multijunction with arbitrary junctions
 """
 
+from __future__ import annotations
+
 import copy
 import math  # simple math
 import os
@@ -15,6 +17,8 @@ import pandas as pd
 
 from pvcircuit import junction
 from pvcircuit.junction import Junction
+
+# from pvcircuit.tandem3T import Tandem3T
 
 
 class Multi2T(object):
@@ -36,15 +40,15 @@ class Multi2T(object):
 
     def __init__(
         self,
-        name="Multi2T",
-        TC=junction.TC_REF,
-        Rs2T=0.0,
-        area=1.0,
-        Jext=0.014,
-        Eg_list=[1.8, 1.4],
-        n=[1, 2],
-        J0ratio=None,
-        J0ref=None,
+        name:str="Multi2T",
+        TC:float=junction.TC_REF,
+        Rs2T:float=0.0,
+        area:float=1.0,
+        Jext:float=0.014,
+        Eg_list:list[float]=[1.8, 1.4],
+        n:list[int]=[1, 2],
+        J0ratio:float=None,
+        J0ref:float=None,
     ):
         # user inputs
         # note n and J0ratio much be same size
@@ -72,7 +76,7 @@ class Multi2T(object):
 
         self.update_now = True
 
-    def copy(self):
+    def copy(self)->Multi2T:
         """
         create a copy of a Multi2T
         need deepcopy() to separate lists, dicts, etc but crashes
@@ -81,7 +85,7 @@ class Multi2T(object):
         return copy.copy(self)
 
     @classmethod
-    def from_3T(cls, dev3T, copy_attributes=True):
+    def from_3T(cls, dev3T:object, copy_attributes:bool=True)-> Multi2T:
         """
         create a Multi2T object that contains the values from a Tandem3T object
         input dev3T is Tandem3T object
@@ -106,7 +110,7 @@ class Multi2T(object):
         return dev2T
 
     @classmethod
-    def from_single_junction(cls, junc, copy_attributes=True):
+    def from_single_junction(cls, junc:Junction, copy_attributes:bool=True):
         """
         create a 2T single junction cell from a Junction object
         from this you can calculate Voc, Jsc, MPP, plot, etc.
@@ -139,19 +143,19 @@ class Multi2T(object):
         return str(self)
 
     @property
-    def TC(self):
+    def TC(self)->float:
         # largest junction TC
         TCs = self.proplist("TC")
         return max(TCs)
 
     @property
-    def lightarea(self):
+    def lightarea(self)->float:
         # largest junction light area
         areas = self.proplist("lightarea")
         return max(areas)
 
     @property
-    def totalarea(self):
+    def totalarea(self)->float:
         # largest junction light area
         areas = self.proplist("totalarea")
         return max(areas)
@@ -216,7 +220,7 @@ class Multi2T(object):
             elif not key in list(self.__dict__.keys()):
                 raise ValueError(f"invalid class attribute {key}")
 
-    def V2T(self, I):
+    def V2T(self, I:float)->float:
         """
         calcuate V(J) of 2T multijunction
         """
@@ -235,6 +239,7 @@ class Multi2T(object):
 
         Vtot = np.sum(self.Vmid) + self.Rs2T * I / self.totalarea
 
+        #TODO raise error
         if not math.isfinite(Vtot):  # if one nan all nan
             # for i in range(self.njuncs): self.Vmid[i]=np.nan
             pass

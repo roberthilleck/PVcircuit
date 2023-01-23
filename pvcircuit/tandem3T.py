@@ -8,6 +8,7 @@ import copy
 import math  # simple math
 import os
 from time import time
+from typing import List
 
 import matplotlib as mpl  # plotting
 import matplotlib.pyplot as plt  # plotting
@@ -28,7 +29,7 @@ class Tandem3T(object):
 
     update_now = True
 
-    def __init__(self, name="Tandem3T", TC=junction.TC_REF, Rz=1, Eg_list=[1.8, 1.4], pn=[-1, 1], Jext=0.014):
+    def __init__(self, name="Tandem3T", TC:float=junction.TC_REF, Rz:float=1, Eg_list:List[float]=[1.8, 1.4], pn:List[float]=[-1, 1], Jext:float=0.014):
         # user inputs
         # default s-type n-on-p
 

@@ -8,10 +8,8 @@ functions for QE analysis
 import math  # simple math
 import os
 from functools import lru_cache
-from time import time
+from typing import Union
 
-import ipywidgets as widgets
-import matplotlib as mpl  # plotting
 import matplotlib.pyplot as plt  # plotting
 import numpy as np  # arrays
 import pandas as pd  # dataframes
@@ -66,7 +64,7 @@ else:
     raise FileNotFoundError(str(ASTMfile))
 
 
-def JdbMD(yEQE, xEQE, TC, Eguess=1.0, kTfilter=3, bplot=False):
+def JdbMD(yEQE: np.ndarray, xEQE: np.ndarray, TC: float, Eguess: float = 1.0, kTfilter: int = 3, bplot: bool = False):
     """
     calculate detailed-balance reverse saturation current
     from EQE vs xEQE
@@ -135,12 +133,12 @@ def JdbMD(yEQE, xEQE, TC, Eguess=1.0, kTfilter=3, bplot=False):
     return Jdb, Egnew
 
 
-def PintMD(Pspec, xspec=wvl):
+def PintMD(Pspec: np.ndarray, xspec: np.ndarray = wvl):
     # optical power of spectrum over full range
     return JintMD(None, None, Pspec, xspec)
 
 
-def JintMD(yEQE, xEQE, Pspec, xspec=wvl):
+def JintMD(yEQE: np.ndarray, xEQE: np.ndarray, Pspec: Union[np.ndarray, str], xspec: np.ndarray = wvl):
     """
     integrate over spectrum or spectra
     if EQE is None -> calculate Power in [W/m2]
@@ -161,7 +159,7 @@ def JintMD(yEQE, xEQE, Pspec, xspec=wvl):
     """
 
     # check spectra input
-    if type(Pspec) is str:  # optional string space, global, direct
+    if isinstance(Pspec, str):  # optional string space, global, direct
         if Pspec in dfrefspec.columns:
             Pspec = dfrefspec[Pspec].to_numpy(dtype=np.float64, copy=True)
         else:
@@ -175,7 +173,7 @@ def JintMD(yEQE, xEQE, Pspec, xspec=wvl):
     elif Pspec.ndim == 2:  # 2D Pspec[lambda, ispec]
         nSlams, nspecs = Pspec.shape
     else:
-        return "dims in Pspec:" + str(Pspec.ndim)
+        raise ValueError(f"dims in Pspec:{Pspec.ndim}")
 
     # check EQE input
     yEQE = np.array(yEQE)  # ensure numpy
@@ -192,7 +190,7 @@ def JintMD(yEQE, xEQE, Pspec, xspec=wvl):
     elif yEQE.ndim == 2:  # 2D EQE[lambda, junction]
         nQlams, njuncs = yEQE.shape
     else:
-        return "dims in EQE:" + str(yEQE.ndim)
+        raise ValueError(f"dims in EQE:{yEQE.ndim}")
 
     # check x range input
     xEQE = np.array(xEQE, dtype=np.float64)
@@ -262,7 +260,7 @@ def JintMD(yEQE, xEQE, Pspec, xspec=wvl):
 
 
 @lru_cache(maxsize=100)
-def JdbFromEg(TC, Eg, dbsides=1.0, method=""):
+def JdbFromEg(TC: float, Eg: float, dbsides: float = 1.0, method: str = ""):
     """
     return the detailed balance dark current
     assuming a square EQE
@@ -291,7 +289,7 @@ def JdbFromEg(TC, Eg, dbsides=1.0, method=""):
 
 
 @lru_cache(maxsize=100)
-def EgFromJdb(TC, Jdb, Eg=1.0, eps=1e-6, itermax=100, dbsides=1.0):
+def EgFromJdb(TC: float, Jdb: float, Eg: float = 1.0, eps: float = 1e-6, itermax: int = 100, dbsides: float = 1.0):
     """
     see GetData AT_Egcalc
     return the bandgap from the Jdb
@@ -305,7 +303,7 @@ def EgFromJdb(TC, Jdb, Eg=1.0, eps=1e-6, itermax=100, dbsides=1.0):
     itermax=100 #maximum iterations
     dbsides=1.  #bifacial->2.
     """
-
+    # TODO dbsides should be int
     Vthlocal = Vth(TC)
     TKlocal = TK(TC)
     x0 = Eg / Vthlocal
@@ -338,7 +336,7 @@ class EQE(object):
 
     """
 
-    def __init__(self, rawEQE, xEQE, name="EQE", sjuncs=None):
+    def __init__(self, rawEQE: np.ndarray, xEQE: np.ndarray, name: str = "EQE", sjuncs: int = None):
         """It creats the EQE class. ntegrate over spectrum or spectra
         rawEQE (numpy.array):  2D(lambda)(junction) raw input rawEQE (not LC corrected)
         xEQE(numpy.array)      xEQE        # wavelengths [nm] for rawEQE data
@@ -364,14 +362,14 @@ class EQE(object):
         elif rawEQE.ndim == 2:  # 2D rawEQE[lambda, junction]
             nQlams, njuncs = rawEQE.shape
         else:
-            raise ValueError("dims in rawEQE:" + str(rawEQE.ndim))
+            raise ValueError(f"dims in rawEQE:{rawEQE.ndim}")
 
         # check x range input
         xEQE = np.array(xEQE, dtype=np.float64)
         if xEQE.ndim == 0:  # scalar or None
             # xEQE = self.xspec  # use spec range if no rawEQE range
             # TODO not sure what should happen here if ndim == 0
-            raise ValueError("dims in xEQE:" + str(xEQE.ndim))
+            raise ValueError(f"dims in xEQE:{xEQE.ndim}")
         if xEQE.ndim == 1:  # 1D
             (nxEQE,) = xEQE.shape
             self.start = min(xEQE)
@@ -379,17 +377,17 @@ class EQE(object):
             if nxEQE == 2:  # evenly spaced x-values (start, stop)
                 xEQE = np.linspace(self.start, self.stop, max(nQlams, 2), dtype=np.float64)
         else:
-            raise ValueError("dims in xEQE:" + str(xEQE.ndim))
+            raise ValueError(f"dims in xEQE:{xEQE.ndim}")
 
         if nQlams == 1:
             rawEQE = np.full_like(xEQE, rawEQE)  # fill rawEQE across range with scalar input
 
         if xEQE.ndim != 1:  # need 1D with same length as rawEQE(lam)
-            raise ValueError("dims in xEQE:" + str(xEQE.ndim) + "!=1")
+            raise ValueError(f"dims in xEQE:{xEQE.ndim} !=1")
         elif nQlams == 1:
             pass
         elif len(xEQE) != nQlams:
-            raise ValueError("nQlams:" + str(len(xEQE)) + "!=" + str(nQlams))
+            raise ValueError(f"nQlams: {len(xEQE)} !=  {nQlams}")
 
         if sjuncs == None:
             sjuncs = [num2words(junc + 1, to="ordinal") for junc in range(njuncs)]
@@ -409,15 +407,15 @@ class EQE(object):
         self.nSlams = None  # number of wavelengths in spectra
         self.nspecs = None  # number of spectra
         self.n0 = None  # index of first spectral data that overlaps with rawEQE data
-        self.n1 = None  # index 
-        
+        self.n1 = None  # index
+
         self.Egs = None
 
         self.corrEQE = np.empty_like(self.rawEQE)  # luminescent coupling corrected EQE same size as rawEQE
         self.etas = np.zeros((njuncs, 3), dtype=np.float64)  # LC factor for next three junctions
         self.LCcorr()  # calculate LC with zero etas
 
-    def LCcorr(self, junc=None, dist=None, val=None):
+    def LCcorr(self, junc: int = None, dist: int = None, val: float = None):
         """It applies the correction of the Luminescent
         coupling to the QE
         junc [l
@@ -428,6 +426,7 @@ class EQE(object):
         # calculate LC corrected EQE
         etas = self.etas
         # with self.debugout: print(junc,dist,val)
+        # TODO do not pass but raise error here?
         if junc == None or dist == None or val == None:
             pass
         else:
@@ -455,8 +454,8 @@ class EQE(object):
                     - raw[:, ijunc - 3] * etas[ijunc, 0] * etas[ijunc, 1] * etas[ijunc, 2]
                 )
 
-    def Jdb(self, TC, Eguess=1.0, kTfilter=3, dbug=False):
-        """It calculate Jscs and Egs from self.corrEQE"""
+    def Jdb(self, TC: float, Eguess: float = 1.0, kTfilter: int = 3, dbug: bool = False):
+        """It calculates Jscs and Egs from self.corrEQE"""
         Vthlocal = Vth(TC)  # kT
         Eguess = np.array([Eguess] * self.njuncs)
         Egvect = np.vectorize(EgFromJdb)
@@ -483,7 +482,7 @@ class EQE(object):
 
         return Jdb, Egnew
 
-    def Jint(self, Pspec="global", xspec=wvl):
+    def Jint(self, Pspec: str = "global", xspec: np.ndarray = wvl):
         """It integrates over spectrum or spectra
           J = spectra * lambda * EQE(lambda)
         Jsc = int(Pspec*QE[0]*lambda) in [mA/cm2]
@@ -542,7 +541,8 @@ class EQE(object):
             Jintegral[:, :, ijunc] = Pspec[n0 : n1 + 1, :] * EQEfine[:, np.newaxis, ijunc]
         return np.trapz(Jintegral, x=xrange, axis=0)
 
-    def plot(self, Pspec="global", ispec=0, specname=None, xspec=wvl, size="x-large"):
+    # TODO change size to font_size or something
+    def plot(self, Pspec: str = "global", ispec: int = 0, specname: str = None, xspec: np.ndarray = wvl, size: str = "x-large"):
         # plot EQE on top of a spectrum
         rnd2 = 100
 
@@ -562,7 +562,7 @@ class EQE(object):
 
         rax = ax.twinx()  # right axis
         # check spectra input
-        if type(Pspec) is str:  # optional string space, global, direct
+        if isinstance(Pspec, str):  # optional string space, global, direct
             if Pspec in dfrefspec.columns:
                 specname = Pspec
                 Pspec = dfrefspec[Pspec].to_numpy(dtype=np.float64, copy=True)

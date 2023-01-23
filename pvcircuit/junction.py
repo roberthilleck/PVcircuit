@@ -4,6 +4,7 @@ This is the PVcircuit Package.
 pvcircuit.Junction()
 properties and methods for each junction
 """
+from __future__ import annotations
 
 import copy
 import math  # simple math
@@ -11,6 +12,7 @@ import os
 from datetime import datetime
 from functools import lru_cache
 from time import time
+from typing import List
 
 import numpy as np  # arrays
 import scipy.constants as con  # physical constants
@@ -39,7 +41,7 @@ GITpath = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
 
 
 # @lru_cache(maxsize=100)
-def TK(TC):
+def TK(TC: float) -> float:
     return TC + con.zero_Celsius
 
 
@@ -47,7 +49,7 @@ def TK(TC):
 
 
 # @lru_cache(maxsize=100)
-def Vth(TC):
+def Vth(TC: float) -> float:
     return k_q * TK(TC)
 
 
@@ -55,7 +57,7 @@ def Vth(TC):
 
 
 @lru_cache(maxsize=100)
-def Jdb(TC, Eg, sigma = 0):
+def Jdb(TC: float, Eg: float, sigma: float = 0):
     # detailed balance saturation current
 
     EgkT = Eg / Vth(TC)
@@ -63,7 +65,6 @@ def Jdb(TC, Eg, sigma = 0):
     # Jdb from Geisz et al.
     # return DB_PREFIX * TK(TC) ** 3.0 * (EgkT * EgkT + 2.0 * EgkT + 2.0) * np.exp(-EgkT)  # units from DB_PREFIX
 
-    
     # Jdb from Rau et al.
     return (
         DB_PREFIX
@@ -80,7 +81,7 @@ def Jdb(TC, Eg, sigma = 0):
     )  # units from DB_PREFIX
 
 
-def timestamp(fmt="%y%m%d-%H%M%S", tm=None):
+def timestamp(fmt="%y%m%d-%H%M%S", tm=None) -> str:
     # return a timestamp string with given format and epoch time
     if tm is None:
         tm = time()
@@ -88,8 +89,8 @@ def timestamp(fmt="%y%m%d-%H%M%S", tm=None):
     return date_time.strftime(fmt)
 
 
-def newoutpath(dname=None):
-    # return a new outputh within pvc_output
+def newoutpath(dname: str = None) -> str:
+    # return a new output within pvc_output
     if os.path.exists(GITpath):
         pvcoutpath = os.path.join(GITpath, "pvc_output")
         if not os.path.exists(pvcoutpath):
@@ -120,22 +121,22 @@ class Junction(object):
 
     def __init__(
         self,
-        name="junc",
-        Eg=Eg_DEFAULT,
-        TC=TC_REF,
-        Gsh=0.0,
-        Rser=0.0,
-        area=AREA_DEFAULT,
-        n=[1.0, 2.0],
-        J0ratio=None,
-        J0ref=None,
-        RBB=None,
-        Jext=0.04,
-        JLC=0.0,
-        J0default=10.0,
-        pn=-1,
-        beta=BETA_DEFAUlT,
-        gamma=0.0,
+        name: str = "junc",
+        Eg: float = Eg_DEFAULT,
+        TC: float = TC_REF,
+        Gsh: float = 0.0,
+        Rser: float = 0.0,
+        area: float = AREA_DEFAULT,
+        n: List[float] = [1.0, 2.0],
+        J0ratio: float = None,
+        J0ref: float = None,
+        RBB: float = None,
+        Jext: float = 0.04,
+        JLC: float = 0.0,
+        J0default: float = 10.0,
+        pn: int = -1,
+        beta: float = BETA_DEFAUlT,
+        gamma: float = 0.0,
     ):
 
         self.ui = None
@@ -178,7 +179,7 @@ class Junction(object):
 
         self.set(RBB=RBB)
 
-    def copy(self):
+    def copy(self) -> Junction:
         """
         create a copy of a Junction
         need deepcopy() to separate lists, dicts, etc but crashes
@@ -330,7 +331,7 @@ class Junction(object):
                     #     print("array", key, value)
             elif key in self.ATTR:  # scalar float
                 self.__dict__[key] = np.float64(value)
-                
+
             # raise error if the key is not in the class attributes
             elif not key in list(self.__dict__.keys()):
                 raise ValueError(f"invalid class attribute {key}")
@@ -341,29 +342,29 @@ class Junction(object):
             #         print("no Junckey", key)
 
     @property
-    def Jphoto(self):
+    def Jphoto(self) -> float:
         return self.Jext * self.lightarea / self.totalarea + self.JLC
 
     # total photocurrent
     # external illumination is distributed over total area
 
     @property
-    def TK(self):
+    def TK(self) -> float:
         # temperature in (K)
         return TK(self.TC)
 
     @property
-    def Vth(self):
+    def Vth(self) -> float:
         # Thermal voltage in volts = kT/q
         return Vth(self.TC)
 
     @property
-    def Jdb(self):
+    def Jdb(self) -> float:
         # detailed balance saturation current
         return Jdb(self.TC, self.Eg)
 
     @property
-    def J0(self):
+    def J0(self) -> float:
         # dynamically calculated J0(T)
         # return np.ndarray [J0(n0), J0(n1), etc]
 
@@ -375,11 +376,12 @@ class Junction(object):
         else:
             return np.nan  # not numpy.ndarray
 
-    def _J0init(self, J0ref):
+    def _J0init(self, J0ref: float):
         """
         initialize self.J0ratio from J0ref
         return np.ndarray [J0(n0), J0(n1), etc]
         """
+        # TODO swich to raise instead return
         J0ref = np.array(J0ref)
         if (isinstance(self.n, np.ndarray)) and (isinstance(J0ref, np.ndarray)):
             if self.n.size == J0ref.size:
@@ -390,11 +392,12 @@ class Junction(object):
         else:
             return 2  # not numpy.ndarray
 
-    def Jem(self, Vmid):
+    def Jem(self, Vmid: float) -> float:
         """
         light emitted from junction by reciprocity
         quantified as current density
         """
+        # TODO swich to raise instead return
         if Vmid > 0.0:
             Jem = self.Jdb * (np.exp(Vmid / self.Vth) - 1.0)  # EL Rau
             Jem += self.gamma * self.Jphoto  # PL Lan and Green
@@ -402,7 +405,7 @@ class Junction(object):
         else:
             return 0.0
 
-    def notdiode(self):
+    def notdiode(self) -> bool:
         """
         is this junction really a diode
         or just a resistor
@@ -418,7 +421,7 @@ class Junction(object):
 
         return jsum == np.float64(0.0)
 
-    def Jmultidiodes(self, Vdiode):
+    def Jmultidiodes(self, Vdiode: float) -> float:
         """
         calculate recombination current density from
         multiple diodes self.n, self.J0 numpy.ndarray
@@ -441,7 +444,7 @@ class Junction(object):
 
         return Jrec
 
-    def JshuntRBB(self, Vdiode):
+    def JshuntRBB(self, Vdiode: float) -> float:
         """
         return shunt + reverse-bias breakdown current
 
@@ -482,7 +485,7 @@ class Junction(object):
 
         return Vdiode * self.Gsh + JRBB
 
-    def Jparallel(self, Vdiode, Jtot):
+    def Jparallel(self, Vdiode: float, Jtot: float) -> float:
         """
         circuit equation to be zeroed to solve for Vi
         for voltage across parallel diodes with shunt and reverse breakdown
@@ -496,7 +499,7 @@ class Junction(object):
         # JRBB = JshuntRBB(Vdiode, self.Vth, self.Gsh, self.RBB_dict)
         return Jtot - JLED - JRBB
 
-    def Vdiode(self, Jdiode):
+    def Vdiode(self, Jdiode: float) -> float:
         """
         Jtot = Jphoto + J
         for junction self of class Junction
@@ -527,7 +530,7 @@ class Junction(object):
 
         return Vdiode
 
-    def _dV(self, Vmid, Vtot):
+    def _dV(self, Vmid: float, Vtot: float) -> float:
         """
         see singlejunction
         circuit equation to be zeroed (returns voltage difference) to solve for Vmid
@@ -538,7 +541,7 @@ class Junction(object):
         dV = Vtot - Vmid + J * self.Rser
         return dV
 
-    def Vmid(self, Vtot):
+    def Vmid(self, Vtot: float) -> float:
         """
         see Vparallel
         find intermediate voltage in a single junction diode with series resistance
