@@ -13,6 +13,7 @@ from functools import lru_cache
 import numpy as np  # arrays
 import pandas as pd
 from parse import parse
+from scipy import constants
 from tqdm.autonotebook import tqdm, trange
 
 import pvcircuit as pvc
@@ -379,6 +380,8 @@ class Meteo(object):
         self.operation_modes=[]
         self.tandem_types=[]
         self.EnergyIn = np.trapz(self.SpecPower, self.daytime.values.astype(np.int64)) / 1e9 / 60  # kWh/m2/yr
+        
+        self.average_photon_energy = None # is calcluated when running calc_ape 
 
     def cellbandgaps(self, EQE, TC=25):
         # subcell Egs for a given EQE class
@@ -538,3 +541,77 @@ class Meteo(object):
         EnergyOut = np.trapz(self.outPowerMP, self.daytime.values.astype(np.int64)) / 1e9 / 60  # kWh/m2/yr
         EYeff = EnergyOut / self.EnergyIn
         return EnergyOut, EYeff
+    
+    
+    def calc_ape(self):
+        """
+        Calcualtes the average photon energy (APE) of the spectra
+        """
+                
+        phi = self.spectra * (self.wavelength * 1e-9) / constants.h / constants.c
+        self.average_photon_energy = np.trapz(x=self.wavelength, y=self.spectra.values) / constants.e / np.trapz(x=self.wavelength, y=phi.values)
+    
+    
+    def filter_ape(self, min_ape:float = 0, max_ape:float = 10):
+        """
+        filter the average photon energy (APE) 
+
+        Args:
+            min_ape (float, optional): min value of th APE. Defaults to 0.
+            max_ape (float, optional): max value of the APE. Defaults to 10.
+        """
+        if self.average_photon_energy is None:
+            self.calc_ape()
+            
+        self_copy = copy.deepcopy(self)
+        ape_mask = (self_copy.average_photon_energy > min_ape) & (self_copy.average_photon_energy < max_ape)
+        
+        self_copy.average_photon_energy = self_copy.average_photon_energy[ape_mask]
+        self_copy.spectra = self_copy.spectra[ape_mask]
+        self_copy.SpecPower = self_copy.SpecPower[ape_mask]
+        self_copy.TempCell = self_copy.TempCell[ape_mask]
+        
+        assert len(self_copy.spectra) == len(self_copy.SpecPower) == len(self_copy.TempCell) == len(self_copy.average_photon_energy)
+        return self_copy
+        
+        
+        
+    def filter_spectra(self, min_spectra:float = 0, max_spectra:float = 10):
+        """
+        spectral data
+
+        Args:
+            min_spectra (float, optional): min value of the spectra. Defaults to 0.
+            max_spectra (float, optional): max value of the spectra. Defaults to 10.
+        """
+
+        
+        self_copy = copy.deepcopy(self)
+        spectra_mask = (self_copy.spectra > min_spectra).all(axis=1) & (self_copy.spectra < max_spectra).all(axis=1)
+        self_copy.average_photon_energy = self_copy.average_photon_energy[spectra_mask]
+        self_copy.spectra = self_copy.spectra[spectra_mask]
+        self_copy.SpecPower = self_copy.SpecPower[spectra_mask]
+        self_copy.TempCell = self_copy.TempCell[spectra_mask]
+        
+        assert len(self.spectra) == len(self.SpecPower) == len(self.TempCell) == len(self.average_photon_energy)
+        return self_copy
+        
+        
+    def filter_custom(self, filter_array:bool):
+        """
+        Applys a custom filter ot the meteo data
+        Args:
+            filter_array (bool): Filter array to apply to the data
+        """
+        assert len(filter_array) == len(self.spectra) == len(self.SpecPower) == len(self.TempCell)
+
+        
+        self_copy = copy.deepcopy(self)
+        self_copy.average_photon_energy = self_copy.average_photon_energy[filter_array]
+        self_copy.spectra = self_copy.spectra[filter_array]
+        self_copy.SpecPower = self_copy.SpecPower[filter_array]
+        self_copy.TempCell = self_copy.TempCell[filter_array]
+        
+        assert len(self.spectra) == len(self.SpecPower) == len(self.TempCell) == len(self.average_photon_energy)
+        return self_copy
+         
