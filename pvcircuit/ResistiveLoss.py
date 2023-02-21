@@ -120,12 +120,12 @@ class GridInterconnection:
         rear_layer_sheet_resistance: float = 100,  # [Ohm/sq] Resistivity of the TCO/conductor rear layer
         front_metal_finger_number=4,  # Number of front metal fingers
         front_metal_rho: float = 1.5e-6,  # [Ohm cm] Resistivity of the front metal contact, e.g. Silver (Ag) 1.59e-6 Ohm cm
-        front_metal_y=30e-4,  # [cm] front metal dimension in y-direction aka front metal finger width.
-        front_metal_thickness: float = 5e-4,  # [cm] front metal thickness
+        front_metal_finger_y=30e-4,  # [cm] front metal dimension in y-direction aka front metal finger width.
+        front_metal_finger_thickness: float = 5e-4,  # [cm] front metal thickness
         rear_metal_finger_number=4,  # Number of rear metal fingers
-        rear_metal_rho: float = 1.5e-6,  # [Ohm cm] Resistivity of the rear metal contact, e.g. Silver (Ag) 1.59e-6 Ohm cm
-        rear_metal_y=30e-4,  # [cm] rear metal dimension in y-direction aka rear metal finger width.
-        rear_metal_thickness: float = 5e-4,  # [cm] rear metal thickness
+        rear_metal_finger_rho: float = 1.5e-6,  # [Ohm cm] Resistivity of the rear metal contact, e.g. Silver (Ag) 1.59e-6 Ohm cm
+        rear_metal_finger_y=30e-4,  # [cm] rear metal dimension in y-direction aka rear metal finger width.
+        rear_metal_finger_thickness: float = 5e-4,  # [cm] rear metal thickness
         # cell dimensions
         cell_x: float = 0.5,  # [cm] cell dimension in x-direction
         cell_y: float = 0.5,  # [cm] cell dimension in y-direction
@@ -134,28 +134,40 @@ class GridInterconnection:
         self.front_layer_sheet_resistance = front_layer_sheet_resistance
         self.rear_layer_sheet_resistance = rear_layer_sheet_resistance
 
-        self.front_metal_rho = front_metal_rho
-        self.rear_metal_rho = rear_metal_rho
+        self.front_metal_finger_rho = front_metal_rho
+        self.rear_metal_finger_rho = rear_metal_finger_rho
 
         # Cell dimensions
         self.cell_x = cell_x  # [cm]
         self.cell_y = cell_y  # [cm]
 
+
+        # Front metal grid dimensions
+        self.front_metal_grid_x = cell_x - 2 * 0.1e-1 # [cm]
+        self.front_metal_grid_y = cell_y  # [cm]
+
         # front metal geometry
         self.front_metal_finger_number = front_metal_finger_number
-        self.front_metal_x = self.cell_x - 2 * 0.1e-1  # [cm] TODO busbar width still hard coded here
-        self.front_metal_y = front_metal_y
-        self.front_metal_thickness = front_metal_thickness
+        self.front_metal_finger_x = self.front_metal_grid_x # Finger extend over full grid
+        self.front_metal_finger_y = front_metal_finger_y
+        self.front_metal_finger_thickness = front_metal_finger_thickness
 
         self.front_busbar_number = 1
+        self.front_busbar_x = 0.0e-1  # [cm]
+
+        # Front metal grid dimensions
+        self.rear_metal_grid_x = cell_x - 2 * 0.1e-1 # [cm]
+        self.rear_metal_grid_y = cell_y  # [cm]
 
         # rear metal geometry
         self.rear_metal_finger_number = rear_metal_finger_number
-        self.rear_metal_x = self.cell_x - 2 * 0.1e-1  # [cm] TODO busbar width still hard coded here
-        self.rear_metal_y = rear_metal_y
-        self.rear_metal_thickness = rear_metal_thickness
+        self.rear_metal_finger_x = self.rear_metal_grid_x # Finger extend over full grid
+        self.rear_metal_finger_y = rear_metal_finger_y
+        self.rear_metal_finger_thickness = rear_metal_finger_thickness
 
         self.rear_busbar_number = 1
+        self.rear_busbar_x = 0
+
     # front unit cell dimension
 
     @property
@@ -163,26 +175,32 @@ class GridInterconnection:
         """
         Size of the front unit cell in x direction, which is the finger length including half the width of the busbar.
         """
-        return 0.5 * self.cell_x / self.front_busbar_number
+        # return 0.5 * self.cell_x / self.front_busbar_number
+        return 0.5 * self.front_metal_grid_x / self.front_busbar_number
 
     @property
     def front_unit_cell_y(self):
         """
         Size of the front unit cell in y direction, which is equivalent to the finger pitch. It's the full pitch to not split the finger width.
         """
-        return self.cell_y / self.front_metal_finger_number
+        return self.front_metal_grid_y / self.front_metal_finger_number
 
     @property
-    def front_unit_cell_metal_x(self):
+    def front_unit_cell_metal_finger_x(self):
         """
-        Length of the unit cell finger, which is half the distance between busbars
+        Length of the unit cell finger, which is half the distance between busbars, without the busbar
         """
-        return 0.5 * self.front_metal_x / self.front_busbar_number
+        return 0.5 * self.front_metal_finger_x / self.front_busbar_number - 0.5 * self.front_busbar_x
 
     @property
     def front_metal_finger_pitch(self):
         """reutuns the fron metal finger pitch"""
-        return self.cell_y / self.front_metal_finger_number
+        return self.front_metal_grid_y / self.front_metal_finger_number
+
+    @property
+    def front_busbar_pitch(self):
+        """reutuns the fron metal finger pitch"""
+        return self.front_metal_finger_x / self.front_busbar_number
 
     # rear unit cell dimension
 
@@ -191,26 +209,27 @@ class GridInterconnection:
         """
         Size of the rear unit cell in x direction, which is the finger length including half the width of the busbar.
         """
-        return 0.5 * self.cell_x / self.rear_busbar_number
+        # return 0.5 * self.cell_x / self.rear_busbar_number
+        return 0.5 * self.rear_metal_grid_x / self.rear_busbar_number
 
     @property
     def rear_unit_cell_y(self):
         """
         Size of the rear unit cell in y direction, which is equivalent to the finger pitch. It's the full pitch to not split the finger width.
         """
-        return self.cell_y / self.rear_metal_finger_number
+        return self.rear_metal_grid_y / self.rear_metal_finger_number
 
     @property
     def rear_unit_cell_metal_x(self):
         """
         Length of the unit cell finger, which is half the distance between busbars
         """
-        return 0.5 * self.rear_metal_x / self.rear_busbar_number
+        return 0.5 * self.rear_metal_grid_x / self.rear_busbar_number - 0.5 * self.rear_busbar_x
 
     @property
     def rear_metal_finger_pitch(self):
         """Returns the rear metal finger pitch"""
-        return self.cell_y / self.rear_metal_finger_number
+        return self.rear_metal_grid_y / self.rear_metal_finger_number
 
     @property
     def cell_area(self):
@@ -227,7 +246,7 @@ class GridInterconnection:
         Returns:
             float: Short circuit current density of the full cell area [mA/cm^2]
         """
-        finger_area = self.front_metal_finger_number * self.front_metal_x * self.front_metal_y
+        finger_area = self.front_metal_finger_number * self.front_metal_finger_x * self.front_metal_finger_y
         metal_fraction = finger_area / self.cell_area
         logger.debug("Metal fraction = %.2f", metal_fraction * 100)
         return (1 - metal_fraction) * jsc
@@ -240,12 +259,12 @@ class GridInterconnection:
         """
 
         # Front metal finger line resistivity
-        r_line_front_metal = self.front_metal_rho / self.front_metal_y / self.front_metal_thickness  # [Ohm / cm]
-        logger.debug("Front metal finger sheet resistance = %.2f mOhm / sq", self.front_metal_rho / self.front_metal_thickness * 1e3)
+        r_line_front_metal = self.front_metal_finger_rho / self.front_metal_finger_y / self.front_metal_finger_thickness  # [Ohm / cm]
+        logger.debug("Front metal finger sheet resistance = %.2f mOhm / sq", self.front_metal_finger_rho / self.front_metal_finger_thickness * 1e3)
 
         # contribution of the front metal finger
         rs_front_metal = (
-            1 / 3 * r_line_front_metal * self.front_unit_cell_metal_x * self.front_unit_cell_x * self.front_unit_cell_y
+            1 / 3 * r_line_front_metal * self.front_unit_cell_metal_finger_x * self.front_unit_cell_x * self.front_unit_cell_y
         )  # [Ohm cm^2]
 
         # contribution of the front layer sheet resistance
@@ -257,16 +276,16 @@ class GridInterconnection:
             * self.front_layer_sheet_resistance
             * self.front_unit_cell_x
             * self.front_unit_cell_y
-            * (self.front_unit_cell_y - self.front_metal_y)
-            / self.front_unit_cell_metal_x
+            * (self.front_unit_cell_y - self.front_metal_finger_y)
+            / self.front_unit_cell_metal_finger_x
         )  # [Ohm cm^2]
 
         # contribution of the contact between front layer and metal finger
         rc_front_metal2layer = 0  # [Ohm cm^2]
 
         # Rear metal finger line resistivity
-        r_line_rear_metal = self.rear_metal_rho / self.rear_metal_y / self.rear_metal_thickness  # [Ohm / cm]
-        logger.debug("Rear metal finger sheet resistance = %.2f mOhm / sq", self.rear_metal_rho / self.rear_metal_thickness * 1e3)
+        r_line_rear_metal = self.rear_metal_finger_rho / self.rear_metal_finger_y / self.rear_metal_finger_thickness  # [Ohm / cm]
+        logger.debug("Rear metal finger sheet resistance = %.2f mOhm / sq", self.rear_metal_finger_rho / self.rear_metal_finger_thickness * 1e3)
 
         # contribution of the rear metal finger
         rs_rear_metal = (
@@ -282,7 +301,7 @@ class GridInterconnection:
             * self.rear_layer_sheet_resistance
             * self.rear_unit_cell_x
             * self.rear_unit_cell_y
-            * (self.rear_unit_cell_y - self.rear_metal_y)
+            * (self.rear_unit_cell_y - self.rear_metal_finger_y)
             / self.rear_unit_cell_metal_x
         )  # [Ohm cm^2]
 
@@ -316,14 +335,24 @@ class GridInterconnection:
             ]
         )
 
-        ax.fill(*cell.exterior.xy, fc="None", ec="b")
+        metal_grid = Polygon(
+            [
+                (self.front_metal_grid_x * 0.5, self.front_metal_grid_y * 0.5),
+                (-self.front_metal_grid_x * 0.5, self.front_metal_grid_y * 0.5),
+                (-self.front_metal_grid_x * 0.5, -self.front_metal_grid_y * 0.5),
+                (self.front_metal_grid_x * 0.5, -self.front_metal_grid_y * 0.5),
+            ]
+        )
 
-        dx = self.front_metal_x * 0.5
-        dy = self.front_metal_y * 0.5
+        # ax.fill(*cell.exterior.xy, fc="None", ec="b")
+        ax.fill(*metal_grid.exterior.xy, fc="None", ec="b")
+
+        dx = self.front_metal_finger_x * 0.5
+        dy = self.front_metal_finger_y * 0.5
         center_point_x = 0
 
         for finger_nr in range(self.front_metal_finger_number):
-            center_point_y = -0.5 * self.cell_y + 0.5 * self.front_metal_finger_pitch + finger_nr * self.front_metal_finger_pitch
+            center_point_y = -0.5 * self.front_metal_grid_y + 0.5 * self.front_metal_finger_pitch + finger_nr * self.front_metal_finger_pitch
             finger = Polygon(
                 [
                     (center_point_x + dx, center_point_y + dy),
@@ -334,13 +363,32 @@ class GridInterconnection:
             )
             ax.fill(*finger.exterior.xy, fc=(0, 0, 1, 1), ec=None)
 
-        if self.front_metal_finger_number > 0:
-            dx = self.front_metal_x * 0.5
-            dy = self.front_metal_finger_pitch * 0.5
+        dx = 0.5 * self.front_busbar_x
+        dy = 0.5 * self.front_metal_grid_y
+        center_point_y = 0
 
-            center_point_x = 0
+        for busbar_nr in range(self.front_busbar_number):
+            center_point_x = -0.5 * self.front_metal_grid_x + 0.5 * self.front_busbar_pitch + busbar_nr * self.front_busbar_pitch
+            busbar = Polygon(
+                [
+                    (center_point_x + dx, center_point_y + dy),
+                    (center_point_x - dx, center_point_y + dy),
+                    (center_point_x - dx, center_point_y - dy),
+                    (center_point_x + dx, center_point_y - dy),
+                ]
+            )
+            ax.fill(*busbar.exterior.xy, fc=(0, 0, 1, .5), ec="None")
+
+        # Draw unit cell
+        if self.front_metal_finger_number > 0:
+            dx = self.front_unit_cell_x * 0.5
+            dy = self.front_unit_cell_y * 0.5
+
+            center_point_x = (
+                -0.5 * self.front_metal_grid_x + 0.25 * self.front_busbar_pitch + np.floor(0.5 * self.front_busbar_number) * self.front_busbar_pitch
+            )
             center_point_y = (
-                -0.5 * self.cell_y + 0.5 * self.front_metal_finger_pitch + np.ceil(0.5 * finger_nr) * self.front_metal_finger_pitch
+                -0.5 * self.front_metal_grid_y + 0.5 * self.front_metal_finger_pitch + np.floor(0.5 * self.front_metal_finger_number) * self.front_metal_finger_pitch
             )
 
             finger = Polygon(
@@ -351,7 +399,7 @@ class GridInterconnection:
                     (center_point_x + dx, center_point_y - dy),
                 ]
             )
-            ax.fill(*finger.exterior.xy, fc=(1, 0, 0, 0.1), ec=None)
+            ax.fill(*finger.exterior.xy, fc=(1, 0, 0, 0.3), ec="r")
 
         ax.set_box_aspect(1)
 
