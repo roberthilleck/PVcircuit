@@ -358,7 +358,7 @@ class Meteo(object):
         self.wavelength = wavelength
         self.spectra = spectra  # transpose for integration with QE
 
-        
+
         # standard data
         pvcpath = os.path.dirname(os.path.dirname(__file__))
         datapath = os.path.join(pvcpath, "data", "")  # Data files here
@@ -368,9 +368,9 @@ class Meteo(object):
         dfrefspec = pd.read_csv(ASTMfile, index_col=0, header=2)
 
         self.ref_wvl = dfrefspec.index.to_numpy(dtype=np.float64, copy=True)
-        
+
          # calculate from spectral proxy data only
-        self.SpecPower = np.trapz(spectra, x=wavelength)  # optical power of each spectrum
+        self.SpecPower = pd.Series(np.trapz(spectra, x=wavelength), index=spectra.index) # optical power of each spectrum
         self.RefPower = np.trapz(pvc.qe.refspec, x=self.ref_wvl, axis=0)  # optical power of each reference spectrum
         self.TempCell = sandia_T(self.SpecPower, self.wind, self.temp)
         self.inPower = self.SpecPower  # * self.NTime  # spectra power*(fractional time)
@@ -380,8 +380,8 @@ class Meteo(object):
         self.operation_modes=[]
         self.tandem_types=[]
         self.EnergyIn = np.trapz(self.SpecPower, self.daytime.values.astype(np.int64)) / 1e9 / 60  # kWh/m2/yr
-        
-        self.average_photon_energy = None # is calcluated when running calc_ape 
+
+        self.average_photon_energy = None # is calcluated when running calc_ape
 
     def cellbandgaps(self, EQE, TC=25):
         # subcell Egs for a given EQE class
@@ -497,7 +497,7 @@ class Meteo(object):
         self.models.append(model)
         self.operation_modes.append(oper)
         self.tandem_types.append(type3T)
-        
+
         # EnergyOut = np.trapz(self.outPower, self.daytime.values.astype(int)) / 1e9 / 60  # kWh/m2/yr
         EnergyOut = np.trapz(outPower, self.daytime.values.astype(np.int64), axis=0) / 1e9 / 60  # kWh/m2/yr
         EYeff = EnergyOut / self.EnergyIn
@@ -535,26 +535,26 @@ class Meteo(object):
                     for i, _ in enumerate(self.inPower)
                 )
                 results = [r.get() for r in results]
-                
+
         self.outPowerMP = results
 
         EnergyOut = np.trapz(self.outPowerMP, self.daytime.values.astype(np.int64)) / 1e9 / 60  # kWh/m2/yr
         EYeff = EnergyOut / self.EnergyIn
         return EnergyOut, EYeff
-    
-    
+
+
     def calc_ape(self):
         """
         Calcualtes the average photon energy (APE) of the spectra
         """
-                
+
         phi = self.spectra * (self.wavelength * 1e-9) / constants.h / constants.c
         self.average_photon_energy = np.trapz(x=self.wavelength, y=self.spectra.values) / constants.e / np.trapz(x=self.wavelength, y=phi.values)
-    
-    
+
+
     def filter_ape(self, min_ape:float = 0, max_ape:float = 10):
         """
-        filter the average photon energy (APE) 
+        filter the average photon energy (APE)
 
         Args:
             min_ape (float, optional): min value of th APE. Defaults to 0.
@@ -562,20 +562,21 @@ class Meteo(object):
         """
         if self.average_photon_energy is None:
             self.calc_ape()
-            
+
         self_copy = copy.deepcopy(self)
         ape_mask = (self_copy.average_photon_energy > min_ape) & (self_copy.average_photon_energy < max_ape)
-        
+
+        self_copy.daytime = self_copy.daytime[ape_mask]
         self_copy.average_photon_energy = self_copy.average_photon_energy[ape_mask]
         self_copy.spectra = self_copy.spectra[ape_mask]
         self_copy.SpecPower = self_copy.SpecPower[ape_mask]
         self_copy.TempCell = self_copy.TempCell[ape_mask]
-        
+
         assert len(self_copy.spectra) == len(self_copy.SpecPower) == len(self_copy.TempCell) == len(self_copy.average_photon_energy)
         return self_copy
-        
-        
-        
+
+
+
     def filter_spectra(self, min_spectra:float = 0, max_spectra:float = 10):
         """
         spectral data
@@ -585,33 +586,60 @@ class Meteo(object):
             max_spectra (float, optional): max value of the spectra. Defaults to 10.
         """
 
-        
+
         self_copy = copy.deepcopy(self)
-        spectra_mask = (self_copy.spectra > min_spectra).all(axis=1) & (self_copy.spectra < max_spectra).all(axis=1)
+        spectra_mask = (self_copy.spectra >= min_spectra).all(axis=1) & (self_copy.spectra < max_spectra).all(axis=1)
+        self_copy.daytime = self_copy.daytime[spectra_mask]
         self_copy.average_photon_energy = self_copy.average_photon_energy[spectra_mask]
         self_copy.spectra = self_copy.spectra[spectra_mask]
         self_copy.SpecPower = self_copy.SpecPower[spectra_mask]
         self_copy.TempCell = self_copy.TempCell[spectra_mask]
-        
+
         assert len(self.spectra) == len(self.SpecPower) == len(self.TempCell) == len(self.average_photon_energy)
         return self_copy
-        
-        
+
+
+
+
     def filter_custom(self, filter_array:bool):
         """
         Applys a custom filter ot the meteo data
         Args:
             filter_array (bool): Filter array to apply to the data
         """
-        assert len(filter_array) == len(self.spectra) == len(self.SpecPower) == len(self.TempCell)
+        # assert len(filter_array) == len(self.spectra) == len(self.SpecPower) == len(self.TempCell)
 
-        
+
         self_copy = copy.deepcopy(self)
-        self_copy.average_photon_energy = self_copy.average_photon_energy[filter_array]
-        self_copy.spectra = self_copy.spectra[filter_array]
-        self_copy.SpecPower = self_copy.SpecPower[filter_array]
-        self_copy.TempCell = self_copy.TempCell[filter_array]
-        
-        assert len(self.spectra) == len(self.SpecPower) == len(self.TempCell) == len(self.average_photon_energy)
+
+        # self_copy.average_photon_energy = self_copy.average_photon_energy[filter_array]
+        # self_copy.spectra = self_copy.spectra[filter_array]
+        # self_copy.SpecPower = self_copy.SpecPower[filter_array]
+        # self_copy.TempCell = self_copy.TempCell[filter_array]
+
+        for attr_name in vars(self):
+            if hasattr(getattr(self_copy, attr_name), '__len__'):
+                attr = getattr(self_copy, attr_name)
+                if len(attr) == len(filter_array):
+                    setattr(self_copy,attr_name,attr[filter_array])
+
+
+        # assert len(self.spectra) == len(self.SpecPower) == len(self.TempCell) == len(self.average_photon_energy)
         return self_copy
-         
+
+    def reindex(self, index:bool, method="nearest", tolerance=pd.Timedelta(seconds=30)):
+        """
+        Reindex according to indexer
+        Args:
+            filter_array (bool): Filter array to apply to the data
+        """
+
+        self_copy = copy.deepcopy(self)
+
+        for attr_name in dir(self):
+            attr = getattr(self, attr_name)
+            if isinstance(attr, pd.DataFrame) or isinstance(attr, pd.Series):
+                setattr(self_copy,attr_name,attr.reindex(index=index, method=method, tolerance=tolerance))
+
+
+        return self_copy
