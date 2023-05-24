@@ -12,6 +12,7 @@ import os
 from time import time
 
 import matplotlib.pyplot as plt  # plotting
+import numba
 import numpy as np  # arrays
 import pandas as pd
 
@@ -20,13 +21,10 @@ from pvcircuit.junction import Junction
 
 # from pvcircuit.tandem3T import Tandem3T
 
-
 class Multi2T(object):
     """
     Multi2T class for optoelectronic model of two terminal multijunction
     """
-
-    update_now = True
 
     junctioncolors = [
         ["black"],  # 0J
@@ -53,8 +51,6 @@ class Multi2T(object):
         # user inputs
         # note n and J0ratio much be same size
 
-        self.update_now = False
-        self.ui = None
 
         self.Vpoints = None
         self.Ipoints = None
@@ -74,7 +70,6 @@ class Multi2T(object):
 
         self.j[0].set(beta=0.0)
 
-        self.update_now = True
 
     def copy(self)->Multi2T:
         """
@@ -212,7 +207,7 @@ class Multi2T(object):
                 self.__dict__[key] = int(value)
             elif key == "Vmid":
                 self.__dict__[key] = np.array(value)
-            elif key in ["j", "update_now"]:
+            elif key in ["j"]:
                 self.__dict__[key] = value
             elif key in ["Rs2T"]:
                 self.__dict__[key] = np.float64(value)
