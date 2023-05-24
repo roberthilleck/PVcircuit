@@ -5,7 +5,9 @@ Function names should follow the pattern "fit_" + fitting method.
 
 """
 
+import matplotlib.pyplot as plt
 import numpy as np
+from lmfit import Minimizer, Parameters, report_fit
 
 # set constant for numpy.linalg.lstsq parameter rcond
 # rcond=-1 for numpy<1.14, rcond=None for numpy>=1.14
@@ -164,7 +166,7 @@ def fit_sandia_simple(voltage, current, v_oc=None, i_sc=None, v_mp_i_mp=None,
 
     # Find beta3 and beta4 from the exponential portion of the IV curve
     beta3, beta4 = _sandia_beta3_beta4(voltage, current, beta0, beta1, ilim,
-                                       i_sc)
+                                       i_sc, v_oc)
 
     # calculate single diode parameters from regression coefficients
     return _sandia_simple_params(beta0, beta1, beta3, beta4, v_mp, i_mp, v_oc)
@@ -217,18 +219,106 @@ def _sandia_beta0_beta1(v, i, vlim, v_oc):
     else:
         return beta0, beta1
 
+# define objective function: returns the array to be minimized
+def fcn2min(params, x, data):
+    """Model a decaying sine wave and subtract data."""
+    beta2 = params['beta2']
+    beta3 = params['beta3']
+    beta4 = params['beta4']
+    model = beta2 * x[:,0] + beta3 * x[:,1] +  beta4 * x[:,2]
+    return model - data
 
-def _sandia_beta3_beta4(voltage, current, beta0, beta1, ilim, i_sc):
+
+
+def _sandia_beta3_beta4(voltage, current, beta0, beta1, ilim, i_sc, v_oc):
     # Used by fit_sde_sandia.
     # Subtract the IV curve from the linear fit.
+    ilim = 0.6
+    vlim = 0.95
     y = beta0 - beta1 * voltage - current
     x = np.array([np.ones_like(voltage), voltage, current]).T
     # Select points where y > ilim * i_sc to regress log(y) onto x
-    idx = (y > ilim * i_sc)
+    # idx = (y > ilim * i_sc)
+    idx = (voltage > vlim * v_oc) & (y > 0)
     result = np.linalg.lstsq(x[idx], np.log(y[idx]), rcond=RCOND)
     coef = result[0]
     beta3 = coef[1].item()
     beta4 = coef[2].item()
+
+    # while beta4 < 0 and ilim > 0:
+    #     ilim -=0.01
+    #     idx = (y > ilim * i_sc)
+    #     result = np.linalg.lstsq(x[idx], np.log(y[idx]), rcond=RCOND)
+    #     coef = result[0]
+    #     beta3 = coef[1].item()
+    #     beta4 = coef[2].item()
+
+
+    # fig,ax = plt.subplots()
+    # ax.plot(voltage[idx], np.log(y[idx]),"x")
+    # ax.plot(voltage[idx], coef[0] + coef[1] * voltage[idx] + coef[2] * current[idx], "--")
+    rs_old = np.inf
+    rs = beta4 / beta3
+    eps = 1e-2
+
+    rs_diff_best = np.inf
+    beta4_best = -1
+    beta3_best = 1
+
+    while np.abs(rs_old/rs - 1) > eps and vlim > 0.2:
+    # while np.abs(rs_old/rs - 1) > eps and ilim > 0:
+        ilim -=0.001
+        vlim -=0.001
+        # if ilim < 0:
+        #     print("ilim error")
+        rs_old = rs
+        # fit iv
+        # idx = (y > ilim * i_sc)
+        idx = (voltage > vlim * v_oc) & (y > 0)
+
+        try:
+            # np.seterr(all='raise')
+
+            result = np.linalg.lstsq(x[idx], np.log(y[idx]), rcond=RCOND)
+
+            # np.seterr(all='warn')
+
+            coef = result[0]
+            beta3 = coef[1].item()
+            beta4 = coef[2].item()
+            rs = beta4 / beta3
+            if np.abs(rs_old/rs - 1) < rs_diff_best and rs >= 0:
+                beta3_best = beta3
+                beta4_best = beta4
+        except np.linalg.LinAlgError:
+            rs_old = 0
+            rs = 1
+
+        if rs <= 0:
+            rs_old = 0
+            rs = 1
+            # beta4 = beta4old * eps * 0.01
+
+            # ax.plot(voltage[idx], current[idx],".")
+
+
+        if vlim < 0.2:
+            print("use best so far")
+            beta3 = beta3_best
+            beta4 = beta4_best
+    # create a set of Parameters
+    # params = Parameters()
+    # params.add('beta2', value=1)
+    # params.add('beta3', value=1)
+    # params.add('beta4', value=1, min = 0)
+
+    # do fit, here with the default leastsq algorithm
+    # minner = Minimizer(fcn2min, params, fcn_args=(x[idx], np.log(y[idx])))
+    # result = minner.minimize()
+    # report_fit(result)
+    # beta3 = result.params['beta3'].value
+    # beta4 = result.params['beta4'].value
+
     if any(np.isnan([beta3, beta4])):
         raise RuntimeError("Parameter extraction failed: beta3={}, beta4={}"
                            .format(beta3, beta4))
@@ -257,7 +347,107 @@ def _sandia_simple_params(beta0, beta1, beta3, beta4, v_mp, i_mp, v_oc):
     return iph, io, rs, rsh, nNsVth
 
 
+
+
 def _calc_I0(voltage, current, iph, gsh, rs, nNsVth):
     return (iph - current - gsh * (voltage + rs * current)) / \
         np.expm1((voltage + rs * current) / nNsVth)
 
+
+
+# def _sandia_beta3_beta4(voltage, current, beta0, beta1, ilim, i_sc, v_oc):
+#     # Used by fit_sde_sandia.
+#     # Subtract the IV curve from the linear fit.
+#     idx = len(voltage)-3
+
+#     y = beta0 - beta1 * voltage - current
+
+#     idx_min = np.where(y < 0)[0].max() + 1
+#     x = np.array([np.ones_like(voltage), voltage, current]).T
+#     # Select points where y > ilim * i_sc to regress log(y) onto x
+#     # idx = (y > ilim * i_sc)
+#     # idx = (voltage > vlim * v_oc) & (y > 0)
+#     result = np.linalg.lstsq(x[idx:], np.log(y[idx:]), rcond=RCOND)
+#     coef = result[0]
+#     beta3 = coef[1].item()
+#     beta4 = coef[2].item()
+
+#     # while beta4 < 0 and ilim > 0:
+#     #     ilim -=0.01
+#     #     idx = (y > ilim * i_sc)
+#     #     result = np.linalg.lstsq(x[idx], np.log(y[idx]), rcond=RCOND)
+#     #     coef = result[0]
+#     #     beta3 = coef[1].item()
+#     #     beta4 = coef[2].item()
+
+
+#     # fig,ax = plt.subplots()
+#     # ax.plot(voltage[idx], np.log(y[idx]),"x")
+#     # ax.plot(voltage[idx], coef[0] + coef[1] * voltage[idx] + coef[2] * current[idx], "--")
+#     rs_old = np.inf
+#     rs = beta4 / beta3
+#     eps = 1e-5
+
+#     rs_diff_best = np.inf
+#     beta4_best = -1
+#     beta3_best = 1
+
+#     while np.abs(rs_old/rs - 1) > eps and idx > idx_min:
+#     # while np.abs(rs_old/rs - 1) > eps and ilim > 0:
+#         idx -= 1
+#         # if ilim < 0:
+#         #     print("ilim error")
+#         rs_old = rs
+#         # fit iv
+#         # idx = (y > ilim * i_sc)
+
+#         try:
+#             np.seterr(all='raise')
+
+#             result = np.linalg.lstsq(x[idx:], np.log(y[idx:]), rcond=RCOND)
+
+#             np.seterr(all='warn')
+
+#             coef = result[0]
+#             beta3 = coef[1].item()
+#             beta4 = coef[2].item()
+#             rs = beta4 / beta3
+#             if np.abs(rs_old/rs - 1) < rs_diff_best and beta3 >= 0 and beta4 >= 0:
+#                 beta3_best = beta3
+#                 beta4_best = beta4
+#         except np.linalg.LinAlgError:
+#             rs_old = 0
+#             rs = 1
+
+#         if beta3 <= 0 or beta4 <= 0:
+#             rs_old = 0
+#             rs = 1
+#             # beta4 = beta4old * eps * 0.01
+
+#             # ax.plot(voltage[idx], current[idx],".")
+
+
+#         if idx <= idx_min + 1:
+#             # print("use best so far")
+#             beta3 = beta3_best
+#             beta4 = beta4_best
+
+
+#     # create a set of Parameters
+#     # params = Parameters()
+#     # params.add('beta2', value=1)
+#     # params.add('beta3', value=1)
+#     # params.add('beta4', value=1, min = 0)
+
+#     # do fit, here with the default leastsq algorithm
+#     # minner = Minimizer(fcn2min, params, fcn_args=(x[idx], np.log(y[idx])))
+#     # result = minner.minimize()
+#     # report_fit(result)
+#     # beta3 = result.params['beta3'].value
+#     # beta4 = result.params['beta4'].value
+
+#     if any(np.isnan([beta3, beta4])):
+#         raise RuntimeError("Parameter extraction failed: beta3={}, beta4={}"
+#                            .format(beta3, beta4))
+#     else:
+#         return beta3, beta4
