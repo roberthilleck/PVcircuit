@@ -3,7 +3,7 @@ T = 25.0 C, Rz= 1 Ω cm2, Rt= 0 Ω cm2, Rr = 0 Ω cm2
 
 top: <pvcircuit.junction.Junction class>
 Eg = 1.80 eV, TC = 25.0 C
-Jext = 14.0 , JLC = 0.0 mA/cm2
+Jext = 14.0 mA/cm2, JLC = 0.0 mA/cm2
 Gsh = 0 S/cm2, Rser = 0 Ωcm2
 lightA = 1 cm2, totalA = 1 cm2
 pn = -1, beta = 0, gamma = 0
