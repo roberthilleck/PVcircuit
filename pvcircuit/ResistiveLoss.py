@@ -15,6 +15,7 @@ Dev infos:
 from __future__ import annotations
 
 import logging
+import pprint
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -30,7 +31,7 @@ logging.basicConfig(format="%(asctime)s - %(name)s - %(levelname)s - %(message)s
 FORMAT = "%(asctime)s %(clientip)-15s %(user)-8s %(message)s"
 logging.basicConfig(format=FORMAT)
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)
+logger.setLevel(logging.INFO)
 
 
 class MonolithicalInterconnection:
@@ -40,23 +41,36 @@ class MonolithicalInterconnection:
 
     def __init__(
         self,
-        rho_front_contact: float = 4.44e-4,  # [Ohm cm] Resistivity of the TCO/conductor front layer e.g. 4.44e-4 [Ohm cm] from Sans IZO batch
-        rho_rear_contact: float = 4.44e-4,  # [Ohm cm] Resistivity of the TCO/conductor rear layer
-        t_front_contact: float = 100.0e-7,  # [cm] thickness of the front contact layer
-        t_rear_contact: float = 100.0e-7,  # [cm] thickness of the rear contact layer
+        front_layer_sheet_resistance: float = 100.0,  # [Ohm / sq] Resistivity of the TCO/conductor front layer e.g. 4.44e-4 [Ohm cm] from Sans IZO batch
+        rear_layer_sheet_resistance: float = 100.0,  # [Ohm cm] Resistivity of the TCO/conductor rear layer
         L: float = 10,  # [cm] length of the cell
         wd: float = 530e-4,  # [cm] dead area width
         wa: float = 1.0,  # [cm] active area width
     ):
-        self.rho_front_contact = rho_front_contact
-        self.rho_rear_contact = rho_rear_contact
-        self.t_front_contact = t_front_contact
-        self.t_rear_contact = t_rear_contact
+        self.front_layer_sheet_resistance = front_layer_sheet_resistance
+        self.rear_layer_sheet_resistance = rear_layer_sheet_resistance
         self.L = L
         self.wd = wd
         self.wa = wa
 
-    def get_cell_area(self) -> float:
+    def __str__(self):
+        return f"""
+        Cell:
+            L = {self.L} [cm]
+            wa = {self.wa} [cm]
+            wd = {self.wd} [cm]
+            cell_area = {self.cell_area} [cm^2]
+        Front side:
+            front_layer_sheet_resistance = {self.front_layer_sheet_resistance} [Ohm / sq]
+        Rear side:
+            rear_layer_sheet_resistance = {self.rear_layer_sheet_resistance} [Ohm / sq]
+        """
+
+    def __repr__(self):
+        return self.__str__()
+
+    @property
+    def cell_area(self) -> float:
         """
         calculate the cell area
         """
@@ -67,8 +81,8 @@ class MonolithicalInterconnection:
         calculate series resistance contribution from monolithical series interconnection
         returns rs:float = series reistance [Ohm cm^2]
         """
-        rs_front = 1 / 3 * self.rho_front_contact / self.t_front_contact * self.wa**3 / (self.wa + self.wd)
-        rs_rear = 1 / 3 * self.rho_rear_contact / self.t_rear_contact * self.wa**3 / (self.wa + self.wd)
+        rs_front = 1 / 3 * self.front_layer_sheet_resistance * self.wa**3 / (self.wa + self.wd)
+        rs_rear = 1 / 3 * self.rear_layer_sheet_resistance * self.wa**3 / (self.wa + self.wd)
         rs = rs_front + rs_rear
         return rs
 
@@ -77,8 +91,8 @@ class MonolithicalInterconnection:
         calculate series resistance contribution from monolithical series interconnection
         returns rs:float = series reistance [Ohm cm^2]
         """
-        rs_front = 1 / 3 * jmpp / vmpp * self.rho_front_contact * self.wa**3 / (self.wa + self.wd)
-        rs_rear = 1 / 3 * jmpp / vmpp * self.rho_rear_contact * self.wa**3 / (self.wa + self.wd)
+        rs_front = 1 / 3 * jmpp / vmpp * self.front_layer_sheet_resistance * self.wa**3 / (self.wa + self.wd)
+        rs_rear = 1 / 3 * jmpp / vmpp * self.rear_layer_sheet_resistance * self.wa**3 / (self.wa + self.wd)
         fr = rs_front + rs_rear
 
         fa = self.wa / (self.wa + self.wd)
@@ -105,7 +119,9 @@ class MonolithicalInterconnection:
         """
         Calculate the power loss base on loss factor simulation.
         """
-        f_loss = self.wa / (self.wa + self.wd) - 1 / 3 * jmpp / vmpp * self.rho_front_contact * self.wa**3 / (self.wa + self.wd)
+        f_loss = self.wa / (self.wa + self.wd) - 1 / 3 * jmpp / vmpp * self.front_layer_sheet_resistance * self.wa**3 / (
+            self.wa + self.wd
+        )
         return (1 - f_loss) * pmpp
 
 
@@ -119,7 +135,7 @@ class GridInterconnection:
         front_layer_sheet_resistance: float = 100,  # [Ohm/sq] Resistivity of the TCO/conductor front layer
         rear_layer_sheet_resistance: float = 100,  # [Ohm/sq] Resistivity of the TCO/conductor rear layer
         front_metal_finger_number=4,  # Number of front metal fingers
-        front_metal_rho: float = 1.5e-6,  # [Ohm cm] Resistivity of the front metal contact, e.g. Silver (Ag) 1.59e-6 Ohm cm
+        front_metal_finger_rho: float = 1.5e-6,  # [Ohm cm] Resistivity of the front metal contact, e.g. Silver (Ag) 1.59e-6 Ohm cm
         front_metal_finger_y=30e-4,  # [cm] front metal dimension in y-direction aka front metal finger width.
         front_metal_finger_thickness: float = 5e-4,  # [cm] front metal thickness
         rear_metal_finger_number=4,  # Number of rear metal fingers
@@ -134,34 +150,25 @@ class GridInterconnection:
         self.front_layer_sheet_resistance = front_layer_sheet_resistance
         self.rear_layer_sheet_resistance = rear_layer_sheet_resistance
 
-        self.front_metal_finger_rho = front_metal_rho
+        self.front_metal_finger_rho = front_metal_finger_rho
         self.rear_metal_finger_rho = rear_metal_finger_rho
 
         # Cell dimensions
         self.cell_x = cell_x  # [cm]
         self.cell_y = cell_y  # [cm]
 
-
-        # Front metal grid dimensions
-        self.front_metal_grid_x = cell_x - 2 * 0.1e-1 # [cm]
-        self.front_metal_grid_y = cell_y  # [cm]
-
         # front metal geometry
         self.front_metal_finger_number = front_metal_finger_number
-        self.front_metal_finger_x = self.front_metal_grid_x # Finger extend over full grid
+        self.front_metal_finger_x = self.front_metal_grid_x  # Finger extend over full grid
         self.front_metal_finger_y = front_metal_finger_y
         self.front_metal_finger_thickness = front_metal_finger_thickness
 
         self.front_busbar_number = 1
         self.front_busbar_x = 0.0e-1  # [cm]
 
-        # Front metal grid dimensions
-        self.rear_metal_grid_x = cell_x - 2 * 0.1e-1 # [cm]
-        self.rear_metal_grid_y = cell_y  # [cm]
-
         # rear metal geometry
         self.rear_metal_finger_number = rear_metal_finger_number
-        self.rear_metal_finger_x = self.rear_metal_grid_x # Finger extend over full grid
+        self.rear_metal_finger_x = self.rear_metal_grid_x  # Finger extend over full grid
         self.rear_metal_finger_y = rear_metal_finger_y
         self.rear_metal_finger_thickness = rear_metal_finger_thickness
 
@@ -169,6 +176,62 @@ class GridInterconnection:
         self.rear_busbar_x = 0
 
     # front unit cell dimension
+
+    # def __repr__(self):
+    # pp = pprint.PrettyPrinter(indent=4)
+    # attrs = {}
+    # for attr in dir(self):
+    #     if not attr.startswith('__'):
+    #         try:
+    #             attrs[attr] = getattr(self, attr)
+    #         except Exception as e:
+    #             attrs[attr] = f'<cannot print: {e}>'
+    # return pp.pformat(attrs)
+
+    # pp = pprint.PrettyPrinter(indent=4)
+    # class_attrs = dir(self)
+    # class_vals = [getattr(self,attr) for attr in class_attrs if not attr.startswith('__')]
+    # print(class_vals)
+    # return pp.pformat([f"{attr}" for attr in class_attrs if not attr.startswith('__')])
+
+    def __str__(self):
+        return f"""
+        Cell:
+            cell_x = {self.cell_x} [cm]
+            cell_y = {self.cell_y} [cm]
+            cell_area = {self.cell_area} [cm^2]
+        Front side:
+            front_layer_sheet_resistance = {self.front_layer_sheet_resistance} [Ohm / sq]
+            front_metal_finger_number = {self.front_metal_finger_number} [#]
+            front_metal_finger_rho = {self.front_metal_finger_rho} [Ohm cm]
+            front_metal_finger_y = {self.front_metal_finger_y} [cm]
+            front_metal_finger_thickness = {self.front_metal_finger_thickness} [cm]
+        Rear side:
+            rear_layer_sheet_resistance = {self.rear_layer_sheet_resistance} [Ohm / sq]
+            rear_metal_finger_number = {self.rear_metal_finger_number} [#]
+            rear_metal_finger_rho = {self.rear_metal_finger_rho} [Ohm cm]
+            rear_metal_finger_y = {self.rear_metal_finger_y} [cm]
+            rear_metal_finger_thickness = {self.rear_metal_finger_thickness} [cm]
+        """
+
+    def __repr__(self):
+        return self.__str__()
+
+    @property
+    def front_metal_grid_x(self):
+        return self.cell_x - 2 * 0.1e-1  # [cm]
+
+    @property
+    def front_metal_grid_y(self):
+        return self.cell_y  # [cm]
+
+    @property
+    def rear_metal_grid_x(self):
+        return self.cell_x - 2 * 0.1e-1  # [cm]
+
+    @property
+    def rear_metal_grid_y(self):
+        return self.cell_y  # [cm]
 
     @property
     def front_unit_cell_x(self):
@@ -236,7 +299,7 @@ class GridInterconnection:
         """Calculate the cell area"""
         return self.cell_x * self.cell_y  # [cm^2]
 
-    def grid_current_loss(self, jsc: float) -> float:
+    def top_grid_current_loss(self, jsc: float) -> float:
         """
         Calculates the current density considering shading of the cell's front side by the metal grid
 
@@ -251,6 +314,35 @@ class GridInterconnection:
         logger.debug("Metal fraction = %.2f", metal_fraction * 100)
         return (1 - metal_fraction) * jsc
 
+    def bottom_grid_current_loss(self, jsc: float) -> float:
+        """
+        Calculates the current density considering shading of the cell's front and rear side by the metal grid
+
+        Args:
+            jsc (float): Short circuit current density of the active area [mA/cm^2]
+
+        Returns:
+            float: Short circuit current density of the full cell area [mA/cm^2]
+        """
+        front_finger_area = self.front_metal_finger_number * self.front_metal_finger_x * self.front_metal_finger_y
+        front_metal_fraction = front_finger_area / self.cell_area
+        logger.debug("Metal fraction = %.2f", front_metal_fraction * 100)
+
+        rear_finger_area = self.rear_metal_finger_number * self.rear_metal_finger_x * self.rear_metal_finger_y
+        rear_metal_fraction = rear_finger_area / self.cell_area
+        logger.debug("Rera metal fraction = %.2f", rear_metal_fraction * 100)
+
+        if ((self.front_metal_finger_number / self.rear_metal_finger_number) % 2 == 1) or ((
+            self.rear_metal_finger_number / self.front_metal_finger_number
+        ) % 2 == 1):
+            # finger cover
+            metal_fraction = max(front_metal_fraction, rear_metal_fraction)
+        else:
+            # finger don't cover
+            metal_fraction = front_metal_fraction + rear_metal_fraction
+
+        return (1 - metal_fraction) * jsc
+
     def grid_series_resistance(self):
         """
         calculate series resistance contribution from metal grid.
@@ -259,8 +351,13 @@ class GridInterconnection:
         """
 
         # Front metal finger line resistivity
-        r_line_front_metal = self.front_metal_finger_rho / self.front_metal_finger_y / self.front_metal_finger_thickness  # [Ohm / cm]
-        logger.debug("Front metal finger sheet resistance = %.2f mOhm / sq", self.front_metal_finger_rho / self.front_metal_finger_thickness * 1e3)
+        r_line_front_metal = (
+            self.front_metal_finger_rho / self.front_metal_finger_y / self.front_metal_finger_thickness
+        )  # [Ohm / cm]
+        logger.debug(
+            "Front metal finger sheet resistance = %.2f mOhm / sq",
+            self.front_metal_finger_rho / self.front_metal_finger_thickness * 1e3,
+        )
 
         # contribution of the front metal finger
         rs_front_metal = (
@@ -285,7 +382,10 @@ class GridInterconnection:
 
         # Rear metal finger line resistivity
         r_line_rear_metal = self.rear_metal_finger_rho / self.rear_metal_finger_y / self.rear_metal_finger_thickness  # [Ohm / cm]
-        logger.debug("Rear metal finger sheet resistance = %.2f mOhm / sq", self.rear_metal_finger_rho / self.rear_metal_finger_thickness * 1e3)
+        logger.debug(
+            "Rear metal finger sheet resistance = %.2f mOhm / sq",
+            self.rear_metal_finger_rho / self.rear_metal_finger_thickness * 1e3,
+        )
 
         # contribution of the rear metal finger
         rs_rear_metal = (
@@ -335,7 +435,7 @@ class GridInterconnection:
             ]
         )
 
-        metal_grid = Polygon(
+        front_metal_grid = Polygon(
             [
                 (self.front_metal_grid_x * 0.5, self.front_metal_grid_y * 0.5),
                 (-self.front_metal_grid_x * 0.5, self.front_metal_grid_y * 0.5),
@@ -344,15 +444,44 @@ class GridInterconnection:
             ]
         )
 
+        rear_metal_grid = Polygon(
+            [
+                (self.rear_metal_grid_x * 0.5, self.rear_metal_grid_y * 0.5),
+                (-self.rear_metal_grid_x * 0.5, self.rear_metal_grid_y * 0.5),
+                (-self.rear_metal_grid_x * 0.5, -self.rear_metal_grid_y * 0.5),
+                (self.rear_metal_grid_x * 0.5, -self.rear_metal_grid_y * 0.5),
+            ]
+        )
+
         # ax.fill(*cell.exterior.xy, fc="None", ec="b")
-        ax.fill(*metal_grid.exterior.xy, fc="None", ec="b")
+        ax.fill(*front_metal_grid.exterior.xy, fc="None", ec="b")
+        ax.fill(*rear_metal_grid.exterior.xy, fc="None", ec="r")
+
+        dx = self.rear_metal_finger_x * 0.5
+        dy = self.rear_metal_finger_y * 0.5
+        center_point_x = 0
+        for finger_nr in range(self.rear_metal_finger_number):
+            center_point_y = (
+                -0.5 * self.rear_metal_grid_y + 0.5 * self.rear_metal_finger_pitch + finger_nr * self.rear_metal_finger_pitch
+            )
+            finger = Polygon(
+                [
+                    (center_point_x + dx, center_point_y + dy),
+                    (center_point_x - dx, center_point_y + dy),
+                    (center_point_x - dx, center_point_y - dy),
+                    (center_point_x + dx, center_point_y - dy),
+                ]
+            )
+            ax.fill(*finger.exterior.xy, fc=(1, 0, 0, 1), ec=None)
 
         dx = self.front_metal_finger_x * 0.5
         dy = self.front_metal_finger_y * 0.5
         center_point_x = 0
 
         for finger_nr in range(self.front_metal_finger_number):
-            center_point_y = -0.5 * self.front_metal_grid_y + 0.5 * self.front_metal_finger_pitch + finger_nr * self.front_metal_finger_pitch
+            center_point_y = (
+                -0.5 * self.front_metal_grid_y + 0.5 * self.front_metal_finger_pitch + finger_nr * self.front_metal_finger_pitch
+            )
             finger = Polygon(
                 [
                     (center_point_x + dx, center_point_y + dy),
@@ -377,7 +506,7 @@ class GridInterconnection:
                     (center_point_x + dx, center_point_y - dy),
                 ]
             )
-            ax.fill(*busbar.exterior.xy, fc=(0, 0, 1, .5), ec="None")
+            ax.fill(*busbar.exterior.xy, fc=(0, 0, 1, 0.5), ec="None")
 
         # Draw unit cell
         if self.front_metal_finger_number > 0:
@@ -385,10 +514,14 @@ class GridInterconnection:
             dy = self.front_unit_cell_y * 0.5
 
             center_point_x = (
-                -0.5 * self.front_metal_grid_x + 0.25 * self.front_busbar_pitch + np.floor(0.5 * self.front_busbar_number) * self.front_busbar_pitch
+                -0.5 * self.front_metal_grid_x
+                + 0.25 * self.front_busbar_pitch
+                + np.floor(0.5 * self.front_busbar_number) * self.front_busbar_pitch
             )
             center_point_y = (
-                -0.5 * self.front_metal_grid_y + 0.5 * self.front_metal_finger_pitch + np.floor(0.5 * self.front_metal_finger_number) * self.front_metal_finger_pitch
+                -0.5 * self.front_metal_grid_y
+                + 0.5 * self.front_metal_finger_pitch
+                + np.floor(0.5 * self.front_metal_finger_number) * self.front_metal_finger_pitch
             )
 
             finger = Polygon(
@@ -427,9 +560,24 @@ class Tandem4T:
         cell_collection = IVCollection.from_folder(folder)
         cell_collection.make_mean_from_fwd_rev()
 
-        best_cell = cell_collection.get_etas().reset_index().groupby("sweep_direction").max().loc["MEAN"]
-        best_iv = cell_collection[best_cell["index"]]
-        (isc, io, rs, rsh, nNsVth) = fit_sandia_simple(best_iv.voltage.values, best_iv.current.values)
+        best_pixel = cell_collection.get_etas()
+        best_pixel = best_pixel[best_pixel["sweep_direction"] == "MEAN"]
+        best_pixel = best_pixel.loc[best_pixel["etas"].idxmax()]
+
+        best_iv = cell_collection[best_pixel.name]
+
+        psc_params = fit_sandia_simple(  # [A/cm^2]  # [A/cm^2]  # [Ohm cm^2]  # [Ohm cm^2]
+            best_iv.voltage.values, best_iv.current.values
+        )
+        ilim = 0.6
+        while psc_params[2] < 0:
+            ilim -= 0.01
+            # fit iv
+            psc_params = fit_sandia_simple(  # [A/cm^2]  # [A/cm^2]  # [Ohm cm^2]  # [Ohm cm^2]
+                best_iv.voltage.values, best_iv.current.values, ilim=ilim
+            )
+
+        (isc, io, rs, rsh, nNsVth) = fit_sandia_simple(best_iv.voltage.values, best_iv.current.values, ilim=ilim)
 
         jo_scale = 1000
         jsc = isc / best_iv.measurement_area  # [A/cm^2]
