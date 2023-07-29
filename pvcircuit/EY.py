@@ -94,36 +94,71 @@ def sandia_T(poa_global, wind_speed, temp_air):
 
     return temp_cell
 
-def _calc_yield_async(i, bot, top, type3T, Jscs, Egs, TempCell, devlist, oper):
-    model = devlist[i]
-    if type3T == "2T":  # Multi2T
-        for ijunc in range(model.njuncs):
-            # model.j[ijunc].set(Eg=Egs[ijunc], Jext=Jscs[i, ijunc], TC=TempCell[i])
-            model.j[ijunc].set(Eg=Egs[i,ijunc], Jext=Jscs[i, ijunc], TC=25)
-        mpp_dict = model.MPP()  # oper ignored for 2T
-        Pmax = mpp_dict["Pmp"]
-    elif type3T in ["s", "r"]:  # Tandem3T
-        model.top.set(Eg=Egs[i,0], Jext=Jscs[i, 0], TC=TempCell[i])
-        # model.top.set(Eg=Egs[0], Jext=Jscs[i, 0], TC=TempCell)
-        model.bot.set(Eg=Egs[i,1], Jext=Jscs[i, 1], TC=TempCell[i])
-        # model.bot.set(Eg=Egs[1], Jext=Jscs[i, 1], TC=25)
-        if oper == "MPP":
-            tempRz = model.Rz
-            model.set(Rz=0)
-            iv3T = model.MPP()
-            model.set(Rz=tempRz)
-        elif oper == "CM":
-            ln, iv3T = model.CM()
-        elif oper[:2] == "VM":
-            ln, iv3T = model.VM(bot, top)
+# def _calc_yield_async(i, bot, top, type3T, Jscs, Egs, TempCell, devlist, oper):
+#     model = devlist[i]
+#     if type3T == "2T":  # Multi2T
+#         for ijunc in range(model.njuncs):
+#             # model.j[ijunc].set(Eg=Egs[ijunc], Jext=Jscs[i, ijunc], TC=TempCell[i])
+#             model.j[ijunc].set(Eg=Egs[i,ijunc], Jext=Jscs[i, ijunc], TC=25)
+#         mpp_dict = model.MPP()  # oper ignored for 2T
+#         Pmax = mpp_dict["Pmp"]
+#     elif type3T in ["s", "r"]:  # Tandem3T
+#         model.top.set(Eg=Egs[i,0], Jext=Jscs[i, 0], TC=TempCell[i])
+#         # model.top.set(Eg=Egs[0], Jext=Jscs[i, 0], TC=TempCell)
+#         model.bot.set(Eg=Egs[i,1], Jext=Jscs[i, 1], TC=TempCell[i])
+#         # model.bot.set(Eg=Egs[1], Jext=Jscs[i, 1], TC=25)
+#         if oper == "MPP":
+#             tempRz = model.Rz
+#             model.set(Rz=0)
+#             iv3T = model.MPP()
+#             model.set(Rz=tempRz)
+#         elif oper == "CM":
+#             ln, iv3T = model.CM()
+#         elif oper[:2] == "VM":
+#             ln, iv3T = model.VM(bot, top)
+#         else:
+#             iv3T = pvc.iv3T.IV3T("bogus")
+#             iv3T.Ptot[0] = 0
+#         Pmax = iv3T.Ptot[0]
+#     else:
+#         Pmax = 0.0
+#     # outPowerMP[i] = Pmax *1e4
+#     return Pmax * 1e4
+
+def _calc_yield_async(bot, top, type3T, Jscs, Egs, TempCell, devlist, oper):
+    Pmax_out = np.zeros(len(Jscs))
+    for i in range(len(Jscs)):
+        model = devlist[i]
+        if type3T == "2T":  # Multi2T
+            for ijunc in range(model.njuncs):
+                # model.j[ijunc].set(Eg=Egs[ijunc], Jext=Jscs[i, ijunc], TC=TempCell[i])
+                model.j[ijunc].set(Eg=Egs[i,ijunc], Jext=Jscs[i, ijunc], TC=25)
+            mpp_dict = model.MPP()  # oper ignored for 2T
+            Pmax = mpp_dict["Pmp"]
+        elif type3T in ["s", "r"]:  # Tandem3T
+            model.top.set(Eg=Egs[i,0], Jext=Jscs[i, 0], TC=TempCell[i])
+            # model.top.set(Eg=Egs[0], Jext=Jscs[i, 0], TC=TempCell)
+            model.bot.set(Eg=Egs[i,1], Jext=Jscs[i, 1], TC=TempCell[i])
+            # model.bot.set(Eg=Egs[1], Jext=Jscs[i, 1], TC=25)
+            if oper == "MPP":
+                tempRz = model.Rz
+                model.set(Rz=0)
+                iv3T = model.MPP()
+                model.set(Rz=tempRz)
+            elif oper == "CM":
+                ln, iv3T = model.CM()
+            elif oper[:2] == "VM":
+                ln, iv3T = model.VM(bot, top)
+            else:
+                iv3T = pvc.iv3T.IV3T("bogus")
+                iv3T.Ptot[0] = 0
+            Pmax = iv3T.Ptot[0]
         else:
-            iv3T = pvc.iv3T.IV3T("bogus")
-            iv3T.Ptot[0] = 0
-        Pmax = iv3T.Ptot[0]
-    else:
-        Pmax = 0.0
-    # outPowerMP[i] = Pmax *1e4
-    return Pmax * 1e4
+            Pmax = 0.0
+        # outPowerMP[i] = Pmax *1e4
+        Pmax_out[i] = Pmax * 1e4
+
+    return Pmax_out
 
 def cellmodeldesc(model, oper):
     # return description of model and operation
@@ -504,6 +539,44 @@ class Meteo(object):
 
         return EnergyOut, EYeff
 
+    # def cellEYeffMP(self, model, oper):
+    #     # max power of a cell under self TMY
+    #     # self.Jscs and self.Egs must be calculate first using cellcurrents
+    #     # Inputs
+    #     # cell 'model' can be 'Multi2T' or 'Tandem3T'
+    #     #'oper' describes operation method unconstrained 'MPP', series-connected 'CM', parallel-configurations 'VM'
+    #     # Outputs
+    #     # - EYeff energy yield efficiency = EY/YearlyEnergy
+    #     # - EY energy yield of cell [kWh/m2/yr]
+
+    #     bot, top, ratio, type3T = cellmodeldesc(model, oper)  # ncells does not matter here
+
+    #     # calc EY, etc
+    #     outPowerMP = np.empty_like(self.inPower)  # initialize
+
+    #     cpu_count = mp.cpu_count()
+    #     print(f"running multiprocess with {cpu_count} pools")
+    #     with tqdm(total=len(self.inPower), leave=True, desc = f"Multi processing {oper}") as pbar:
+
+    #         dev_list = [copy.deepcopy(model) for _ in range(len(self.Jscs))]
+    #         with mp.Pool(cpu_count) as pool:
+    #             def callback(*args):
+    #                 # callback
+    #                 pbar.update()
+    #                 return
+
+    #             results = list(
+    #                 pool.apply_async(_calc_yield_async, args=(i, bot, top, type3T, self.Jscs, self.Egs, self.TempCell, dev_list, oper), callback=callback)
+    #                 for i, _ in enumerate(self.inPower)
+    #             )
+    #             results = [r.get() for r in results]
+
+    #     self.outPowerMP = results
+
+    #     EnergyOut = np.trapz(self.outPowerMP, self.daytime.values.astype(np.int64)) / 1e9 / 60  # kWh/m2/yr
+    #     EYeff = EnergyOut / self.EnergyIn
+    #     return EnergyOut, EYeff
+
     def cellEYeffMP(self, model, oper):
         # max power of a cell under self TMY
         # self.Jscs and self.Egs must be calculate first using cellcurrents
@@ -519,22 +592,28 @@ class Meteo(object):
         # calc EY, etc
         outPowerMP = np.empty_like(self.inPower)  # initialize
 
+        # Split data into chunks for workers
+        max_chunk_size = 200
         cpu_count = mp.cpu_count()
+        chunk_ids = np.arange(len(self.Jscs))
+        chunk_size =  min(len(chunk_ids) // cpu_count, max_chunk_size)
+
+        chunks = [chunk_ids[i:i + chunk_size] for i in range(0, len(chunk_ids), chunk_size)]
+
         print(f"running multiprocess with {cpu_count} pools")
         with tqdm(total=len(self.inPower), leave=True, desc = f"Multi processing {oper}") as pbar:
 
-            dev_list = [copy.deepcopy(model) for _ in range(len(self.Jscs))]
+            dev_list = np.array([copy.deepcopy(model) for _ in range(len(self.Jscs))])
             with mp.Pool(cpu_count) as pool:
                 def callback(*args):
                     # callback
-                    pbar.update()
+                    pbar.update(len(args[0]))
                     return
 
-                results = list(
-                    pool.apply_async(_calc_yield_async, args=(i, bot, top, type3T, self.Jscs, self.Egs, self.TempCell, dev_list, oper), callback=callback)
-                    for i, _ in enumerate(self.inPower)
-                )
-                results = [r.get() for r in results]
+                # Assign tasks to workers
+                jobs = [pool.apply_async(_calc_yield_async, args=(bot, top, type3T, self.Jscs[chunk], self.Egs[chunk], self.TempCell[chunk], dev_list[chunk], oper), callback=callback) for chunk in chunks]
+                # Get results from workers
+                results = [item for job in jobs for item in job.get()]
 
         self.outPowerMP = results
 
