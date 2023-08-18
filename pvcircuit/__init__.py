@@ -32,6 +32,9 @@ import pvcircuit.multi2T as multi2T
 import pvcircuit.qe as qe
 import pvcircuit.tandem3T as tandem3T
 
+from pvcircuit.submodules.NRELMeteorological import environmental
+
+
 # expose constructors to package's top level
 Junction = junction.Junction
 TK = junction.TK
@@ -53,6 +56,13 @@ EQE = qe.EQE
 
 TMY = EY.TMY
 Meteo = EY.Meteo
+
+sync = environmental.sync
+
+Meteorological = environmental.Meteorological
+Spectra = environmental.Spectra
+
+
 
 #
 VERSION = 0.04
