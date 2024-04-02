@@ -129,15 +129,25 @@ dmypy.json
 # Pyre type checker
 .pyre/
 
-# ignore images 
+# ignore pyc
+*.pyc
+
+# ignore images
 *.png
 
-# ignore data 
+# ignore pickles
+*.pkl
+
+# ignore data
 data/*
 
-# ignore vscode settings  
+# ignore vscode settings
 *.json
 *.code-*
 
 # ignore bat
 *.bat
+
+# ignore zips
+*.zip
+*.nsrdb

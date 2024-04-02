@@ -1,4 +1,3 @@
-[submodule "NRELMeteorological"]
+[submodule "pvcircuit/submodules/NRELMeteorological"]
 	path = pvcircuit/submodules/NRELMeteorological
-	url = https://github.nrel.gov/Tandems/NREL_Meteorological.git
-	branch = main
+	url = git@github.nrel.gov:Tandems/NREL_Meteorological.git
