@@ -21,7 +21,6 @@ setup(
         "parse>=1.19.0",
         "pandas>=1.4.0",
         "scipy>=1.0.0",
-        "tandems>=0.989",
         "openpyxl>=3.0.10",
         "et_xmlfile>=1.1.0",
         "tqdm>=4.64.0",

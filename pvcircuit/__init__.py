@@ -31,11 +31,8 @@ import pvcircuit.junction as junction
 import pvcircuit.multi2T as multi2T
 import pvcircuit.qe as qe
 import pvcircuit.tandem3T as tandem3T
+from pvcircuit.submodules.NRELMeteorological import environmental
 
-# expose constructors to package's top level
-Junction = junction.Junction
-TK = junction.TK
-Vth = junction.Vth
 Jdb = junction.Jdb
 
 Multi2T = multi2T.Multi2T
@@ -53,6 +50,25 @@ EQE = qe.EQE
 
 TMY = EY.TMY
 Meteo = EY.Meteo
+
+sync = environmental.sync
+
+environmental = environmental
+
+Meteorological = environmental.Meteorological
+Spectra = environmental.Spectra
+
+
+# Expose nsrdb
+try:
+    from pvcircuit.submodules.NRELMeteorological import config, nsrdb
+
+    NSRDB = nsrdb.NSRDB
+    config = config
+
+except ModuleNotFoundError:
+    print("NSRDB is not avaialbe")
+
 
 #
 VERSION = 0.04

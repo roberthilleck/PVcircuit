@@ -136,9 +136,9 @@ def _calc_yield_async(bot, top, type3T, Jscs, Egs, TempCell, devlist, oper):
             mpp_dict = model.MPP()  # oper ignored for 2T
             Pmax = mpp_dict["Pmp"]
         elif type3T in ["s", "r"]:  # Tandem3T
-            model.top.set(Eg=Egs[i,0], Jext=Jscs[i, 0], TC=TempCell[i])
+            model.top.set(Eg=Egs[i,0], Jext=Jscs[i, 0], TC=TempCell.iloc[i])
             # model.top.set(Eg=Egs[0], Jext=Jscs[i, 0], TC=TempCell)
-            model.bot.set(Eg=Egs[i,1], Jext=Jscs[i, 1], TC=TempCell[i])
+            model.bot.set(Eg=Egs[i,1], Jext=Jscs[i, 1], TC=TempCell.iloc[i])
             # model.bot.set(Eg=Egs[1], Jext=Jscs[i, 1], TC=25)
             if oper == "MPP":
                 tempRz = model.Rz
@@ -350,12 +350,12 @@ class TMY(object):
         for i in trange(len(self.inPower), leave=True, desc='single core'):
             if type3T == "2T":  # Multi2T
                 for ijunc in range(model.njuncs):
-                    model.j[ijunc].set(Eg=self.Egs[ijunc], Jext=self.Jscs[i, ijunc], TC=self.TempCell[i])
+                    model.j[ijunc].set(Eg=self.Egs[ijunc], Jext=self.Jscs[i, ijunc], TC=self.TempCell.iloc[i])
                 mpp_dict = model.MPP()  # oper ignored for 2T
                 Pmax = mpp_dict["Pmp"]
             elif type3T in ["s", "r"]:  # Tandem3T
-                model.top.set(Eg=self.Egs[0], Jext=self.Jscs[i, 0], TC=self.TempCell[i])
-                model.bot.set(Eg=self.Egs[1], Jext=self.Jscs[i, 1], TC=self.TempCell[i])
+                model.top.set(Eg=self.Egs[0], Jext=self.Jscs[i, 0], TC=self.TempCell.iloc[i])
+                model.bot.set(Eg=self.Egs[1], Jext=self.Jscs[i, 1], TC=self.TempCell.iloc[i])
                 if oper == "MPP":
                     iv3T = model.MPP()
                 elif oper == "CM":
@@ -500,12 +500,12 @@ class Meteo(object):
 
             if type3T == "2T":  # Multi2T
                 for ijunc in range(model.njuncs):
-                    model.j[ijunc].set(Eg=self.Egs[i, ijunc], Jext=self.Jscs[i, ijunc], TC=self.TempCell[i])
+                    model.j[ijunc].set(Eg=self.Egs[i, ijunc], Jext=self.Jscs[i, ijunc], TC=self.TempCell.iloc[i])
                 mpp_dict = model.MPP()  # oper ignored for 2T
                 Pmax = mpp_dict["Pmp"]
             elif type3T in ["s", "r"]:  # Tandem3T
-                model.top.set(Eg=self.Egs[i, 0], Jext=self.Jscs[i, 0], TC=self.TempCell[i])
-                model.bot.set(Eg=self.Egs[i, 1], Jext=self.Jscs[i, 1], TC=self.TempCell[i])
+                model.top.set(Eg=self.Egs[i, 0], Jext=self.Jscs[i, 0], TC=self.TempCell.iloc[i])
+                model.bot.set(Eg=self.Egs[i, 1], Jext=self.Jscs[i, 1], TC=self.TempCell.iloc[i])
                 if oper == "MPP":
                     tempRz = model.Rz
                     model.set(Rz=0)
@@ -611,7 +611,7 @@ class Meteo(object):
                     return
 
                 # Assign tasks to workers
-                jobs = [pool.apply_async(_calc_yield_async, args=(bot, top, type3T, self.Jscs[chunk], self.Egs[chunk], self.TempCell[chunk], dev_list[chunk], oper), callback=callback) for chunk in chunks]
+                jobs = [pool.apply_async(_calc_yield_async, args=(bot, top, type3T, self.Jscs[chunk], self.Egs[chunk], self.TempCell.iloc[chunk], dev_list[chunk], oper), callback=callback) for chunk in chunks]
                 # Get results from workers
                 results = [item for job in jobs for item in job.get()]
 

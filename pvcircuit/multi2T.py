@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-This is the PVcircuit Package. 
+This is the PVcircuit Package.
     pvcircuit.Multi2T()    # properties of a 2T multijunction with arbitrary junctions
 """
 
@@ -12,7 +12,6 @@ import os
 from time import time
 
 import matplotlib.pyplot as plt  # plotting
-import numba
 import numpy as np  # arrays
 import pandas as pd
 
@@ -200,7 +199,7 @@ class Multi2T(object):
                 junc.set(**jikwargs)
 
         # remaining Multi2T kwargs
-        for key, value in kwargs.items():            
+        for key, value in kwargs.items():
             if key == "name":
                 self.__dict__[key] = str(value)
             elif key == "njuncs":

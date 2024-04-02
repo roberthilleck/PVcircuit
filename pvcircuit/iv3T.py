@@ -340,7 +340,11 @@ class IV3T(object):
         find max power point of existing IV3T class datapoints
         """
 
+        if self.Ptot.size == 0:
+            return 0
+
         temp3T = IV3T(name="MPP" + name, shape=1, meastype=self.meastype, area=self.area)
+
         nmax = np.argmax(self.Ptot)
 
         for key in self.arraykeys:
