@@ -6,61 +6,44 @@ This is the PVcircuit Package.
 
 import copy
 import glob
+import itertools
 import multiprocessing as mp
 import os
+import pickle
+import sys
+import time
+import timeit
+import warnings
+from datetime import datetime, timedelta
 from functools import lru_cache
-import matplotlib.pyplot as plt
+from glob import glob
 
-import numpy as np  # arrays
-import pandas as pd
-from parse import parse
-from scipy import constants
-from scipy.interpolate import interp1d
-from scipy.integrate import trapezoid
-from tqdm.autonotebook import tqdm, trange
-
-import pvcircuit as pvc
-
-import pandas as pd
-import numpy as np
-import matplotlib.pyplot as plt
 import matplotlib as mpl
 import matplotlib.dates as mdates
-import pvcircuit as pvc
-from scipy import constants
-from scipy.optimize import curve_fit, fsolve
-from scipy.special import erfc
-import itertools
-
-from scipy.signal import find_peaks
-
-from pvcircuit.physics_helpers import fit_sandia_simple
-from pvlib.pvsystem import singlediode
+import matplotlib.pyplot as plt
+import numpy as np  # arrays
+import pandas as pd
 import pvlib
-
-import os
-import sys
-
-from glob import glob
-from datetime import datetime, timedelta
-import time
+from parse import parse
+from pvlib.pvsystem import singlediode
+from scipy import constants
+from scipy.integrate import trapezoid
+from scipy.interpolate import interp1d
+from scipy.optimize import OptimizeWarning, curve_fit, fsolve
+from scipy.signal import find_peaks
+from scipy.special import erfc
+from tqdm.autonotebook import tqdm, trange
 from tqdm.notebook import trange
-import timeit
-import pickle
+
+import pvcircuit as pvc
 
 # set path for NREL meteorological package and import
 # sys.path.append("../../NREL_Meteorological")
-from pvcircuit import environmental, Spectra, Meteorological, sync
-import warnings
-from scipy.optimize import OptimizeWarning
-import pickle
-from scipy.interpolate import interp1d
-
+from pvcircuit import Meteorological, Spectra, environmental, sync
 
 # from pvcircuit import Tandem3T
 # from pvcircuit import Spectra, Meteorological, sync
 from pvcircuit.physics_helpers import fit_sandia_simple
-from pvlib.pvsystem import singlediode
 
 #  from 'Tandems' project
 # vectoriam = np.vectorize(physicaliam)
@@ -657,6 +640,7 @@ class EnergyYield:
 
         else:
             print("Stored meteo data and spectra reloaded")
+            print(spectra_class.label)
             spectra_class.spectra = spectra_class.spectra.loc[date_start:date_end]
             meteo_data.data = meteo_data.data.loc[date_start:date_end]
 
@@ -676,10 +660,29 @@ class EnergyYield:
 
         # calculate class attributes
         self.irradiance = pd.Series(
-            sc.trapz(self.spectra, x=self.wavelength), index=self.spectra.index
+            np.trapz(self.spectra, x=self.wavelength), index=self.spectra.index
         )  # optical power of each spectrum
         self.cell_temperature = sandia_T(self.irradiance, self.wind_speed, self.ambient_temperature)
         self.average_photon_energy = self.get_ape()
+
+
+
+    def load_farmsnit(self, hdf_filepath):
+
+        data = pd.read_hdf(hdf_filepath)
+        data.index = data.index.tz_localize("UTC").tz_convert("America/Denver")
+
+        # set class attributes
+        self.daytime = data.index
+        self.wavelength = data.columns[150:1501].astype(float)*1e3
+        self.spectra = data.iloc[:,150:1501]/1e3
+
+        # calculate class attributes
+        self.irradiance = pd.Series(
+            np.trapz(self.spectra, x=self.wavelength), index=self.spectra.index
+        )  # optical power of each spectrum
+        self.average_photon_energy = self.get_ape()
+
 
     def filter_meteo(self):
         # remove nan
