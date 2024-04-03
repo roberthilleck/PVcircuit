@@ -7,7 +7,7 @@ import pytest
 from pvlib import ivtools, pvsystem
 
 import pvcircuit as pvc
-from pvcircuit import Junction, Multi2T
+from pvcircuit import Multi2T
 
 if __name__ == "__main__":
 
@@ -107,7 +107,7 @@ def test_basic_functions():
 # %%
 @pytest.fixture
 def junction():
-    return Junction()
+    return pvc.junction.Junction()
 
 
 def test_junction_str(junction):
@@ -124,6 +124,15 @@ def test_junction_setter(junction):
 
     junction.set(n=[1, 2])
     np.testing.assert_array_equal(junction.n, np.array([1, 2]))
+
+    junction.set(**{"n[0]": 3})
+    np.testing.assert_array_equal(junction.n, np.array([3, 2]))
+
+    with pytest.raises(IndexError, match=r"invalid junction index. Set index is 3 but junction size is 2"):
+        junction.set(**{"n[2]": 4})
+
+    with pytest.raises(ValueError, match=r"invalid junction array size. Set size is 3 but junction size is n=2 and J0ratio=2"):
+        junction.set(n=[5, 6, 7])
 
     junction.set(area=1.23)
     np.testing.assert_almost_equal(junction.lightarea, 1.23)
