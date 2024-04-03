@@ -316,11 +316,6 @@ class Junction(object):
                             self.__dict__[key] = localarray
                             # with self.debugout:
                             #     print("scalar", key, ind, localarray)
-                        else:
-                            raise IndexError(f"invalid junction index. Set index is {ind+1} but junction size is {localarray.size}")
-
-                elif not len(value) == len(self.n) or not len(value) == len(self.J0ratio):
-                    raise ValueError(f"invalid junction array size. Set size is {len(value)} but junction size is n={len(self.n)} and J0ratio={len(self.J0ratio)}")
                 else:
                     self.__dict__[key] = np.array(value)
                     # with self.debugout:
