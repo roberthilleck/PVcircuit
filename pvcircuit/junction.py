@@ -316,7 +316,18 @@ class Junction(object):
                             self.__dict__[key] = localarray
                             # with self.debugout:
                             #     print("scalar", key, ind, localarray)
+                        else:
+                            raise IndexError(f"invalid junction index. Set index is {ind+1} but junction size is {localarray.size}")
                 else:
+                    # check if both, n and J0ratio, are set if they have the same size
+                    if "n" in kwargs.keys() and "J0ratio" in kwargs.keys():
+                        if not len(kwargs["n"]) == len(kwargs["J0ratio"]):
+                            raise ValueError("n and J0ratio must be same size")
+
+                    # if only n or J0ratio is set, check if it matches current diode configuration
+                    elif not len(value) == len(self.n) and not len(value) == len(self.J0ratio):
+                        raise ValueError("setting single n or J0ratio value must match previous number of diodes")
+
                     self.__dict__[key] = np.array(value)
                     # with self.debugout:
                     #     print("array", key, value)

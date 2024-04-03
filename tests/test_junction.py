@@ -121,23 +121,43 @@ def test_junction_str(junction):
 
 
 def test_junction_setter(junction):
+    """
+    Test the junction setters.
+    """
 
+    # test setting of n
     junction.set(n=[1, 2])
     np.testing.assert_array_equal(junction.n, np.array([1, 2]))
 
+    # test setting of single n value
     junction.set(**{"n[0]": 3})
     np.testing.assert_array_equal(junction.n, np.array([3, 2]))
 
+    # test mismatch when setting single n value
     with pytest.raises(IndexError, match=r"invalid junction index. Set index is 3 but junction size is 2"):
         junction.set(**{"n[2]": 4})
 
-    with pytest.raises(ValueError, match=r"invalid junction array size. Set size is 3 but junction size is n=2 and J0ratio=2"):
-        junction.set(n=[5, 6, 7])
+    # test mismatch when setting n and J0ratio of different size
+    with pytest.raises(ValueError, match=r"n and J0ratio must be same size"):
+        junction.set(n=[1, 2, 3], J0ratio=[1, 2])
 
+    with pytest.raises(ValueError, match=r"n and J0ratio must be same size"):
+        junction.set(n=[1, 2], J0ratio=[1, 2, 3])
+
+    # test mismatch when setting n or J0ratio with different number of current diode number
+    with pytest.raises(ValueError, match=r"setting single n or J0ratio value must match previous number of diodes"):
+        junction.set(n=[1, 2, 3])
+
+    with pytest.raises(ValueError, match=r"setting single n or J0ratio value must match previous number of diodes"):
+        junction.set(J0ratio=[1, 2, 3])
+
+
+    # test setting the general area with light and total area
     junction.set(area=1.23)
     np.testing.assert_almost_equal(junction.lightarea, 1.23)
     np.testing.assert_almost_equal(junction.totalarea, 1.23)
 
+    # test setting invalid class values
     with pytest.raises(ValueError, match=r"invalid class attribute test"):
         junction.set(test=-1)
     with pytest.raises(ValueError, match=r"invalid class attribute avalanche"):
@@ -145,6 +165,7 @@ def test_junction_setter(junction):
     with pytest.raises(ValueError, match=r"invalid class attribute mrb"):
         junction.set(mrb=1)
 
+    # test reverse bias breakdown model keys
     junction.set(RBB="bishop")
     junction.set(avalanche=1)
 
@@ -156,6 +177,9 @@ def test_junction_setter(junction):
 
 
 def test_junction_properties(junction):
+    """
+    Test the junction properties.
+    """
 
     np.testing.assert_almost_equal(junction.Jphoto, 0.04)
     np.testing.assert_allclose(junction.J0, [1.3141250302231388e-15, 3.6250862475576206e-09])
