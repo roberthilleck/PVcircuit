@@ -106,7 +106,7 @@ class Junction(object):
     Class for PV junctions.
     """
 
-    ATTR = ["Eg", "TC", "Gsh", "Rser", "area", "lightarea", "totalarea", "Jext", "JLC", "beta", "gamma", "pn", "Jphoto", "TK", "Jdb"]
+    ATTR = ["Eg", "TC", "Gsh", "Rser", "area", "lightarea", "totalarea", "Jext", "JLC", "beta", "gamma", "pn", "Jphoto", "TK", "Jdb", "RBB"]
     ARY_ATTR = ["n", "J0ratio", "J0"]
     J0scale = 1000.0  # mA same as Igor, changes J0ratio because of units
 
