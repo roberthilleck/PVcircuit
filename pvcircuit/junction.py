@@ -69,14 +69,7 @@ def Jdb(TC: float, Eg: float, sigma: float = 0):
     return (
         DB_PREFIX
         * TK(TC) ** 3.0
-        * (
-            EgkT * EgkT
-            + 2.0 * EgkT
-            + 2.0
-            - 2 * sigma**2 * Eg / (Vth(TC)) ** 3
-            - sigma**2 / (Vth(TC)) ** 2
-            + sigma**4 / (Vth(TC)) ** 4
-        )
+        * (EgkT * EgkT + 2.0 * EgkT + 2.0 - 2 * sigma**2 * Eg / (Vth(TC)) ** 3 - sigma**2 / (Vth(TC)) ** 2 + sigma**4 / (Vth(TC)) ** 4)
         * np.exp(-EgkT + sigma**2 / (2 * (Vth(TC)) ** 2))
     )  # units from DB_PREFIX
 
@@ -111,11 +104,9 @@ def newoutpath(dname: str = None) -> str:
 class Junction(object):
     """
     Class for PV junctions.
-
-    :param Rs: series resistance [ohms]
     """
 
-    ATTR = ["Eg", "TC", "Gsh", "Rser", "lightarea", "totalarea", "Jext", "JLC", "beta", "gamma", "pn", "Jphoto", "TK", "Jdb"]
+    ATTR = ["Eg", "TC", "Gsh", "Rser", "area", "lightarea", "totalarea", "Jext", "JLC", "beta", "gamma", "pn", "Jphoto", "TK", "Jdb", "RBB"]
     ARY_ATTR = ["n", "J0ratio", "J0"]
     J0scale = 1000.0  # mA same as Igor, changes J0ratio because of units
 
@@ -148,7 +139,7 @@ class Junction(object):
         self.Eg = np.float64(Eg)  #: [eV] junction band gap
         self.TC = np.float64(TC)  #: [C] junction temperature
         self.Jext = np.float64(Jext)  #: [A/cm2] photocurrent density
-        self.Gsh = np.float64(Gsh)  #: [mho] shunt conductance=1/Rsh
+        self.Gsh = np.float64(Gsh)  #: [ohm] shunt conductance=1/Rsh
         self.Rser = np.float64(Rser)  #: [ohm] series resistance
         self.lightarea = np.float64(area)  # [cm2] illuminated junction area
         self.totalarea = np.float64(area)  # [cm2] total junction area including shaded areas
@@ -325,7 +316,18 @@ class Junction(object):
                             self.__dict__[key] = localarray
                             # with self.debugout:
                             #     print("scalar", key, ind, localarray)
+                        else:
+                            raise IndexError(f"invalid junction index. Set index is {ind+1} but junction size is {localarray.size}")
                 else:
+                    # check if both, n and J0ratio, are set if they have the same size
+                    if "n" in kwargs.keys() and "J0ratio" in kwargs.keys():
+                        if not len(kwargs["n"]) == len(kwargs["J0ratio"]):
+                            raise ValueError("n and J0ratio must be same size")
+
+                    # if only n or J0ratio is set, check if it matches current diode configuration
+                    elif not len(value) == len(self.n) and not len(value) == len(self.J0ratio):
+                        raise ValueError("setting single n or J0ratio value must match previous number of diodes")
+
                     self.__dict__[key] = np.array(value)
                     # with self.debugout:
                     #     print("array", key, value)
@@ -379,18 +381,12 @@ class Junction(object):
     def _J0init(self, J0ref: float):
         """
         initialize self.J0ratio from J0ref
-        return np.ndarray [J0(n0), J0(n1), etc]
         """
-        # TODO swich to raise instead return
         J0ref = np.array(J0ref)
-        if (isinstance(self.n, np.ndarray)) and (isinstance(J0ref, np.ndarray)):
-            if self.n.size == J0ref.size:
-                self.J0ratio = self.J0scale * J0ref / (self.Jdb * self.J0scale) ** (1.0 / self.n)
-                return 0  # success
-            else:
-                return 1  # different sizes
+        if self.n.size == J0ref.size:
+            self.J0ratio = self.J0scale * J0ref / (self.Jdb * self.J0scale) ** (1.0 / self.n)
         else:
-            return 2  # not numpy.ndarray
+            raise ValueError("J0ref and n must be same size")
 
     def Jem(self, Vmid: float) -> float:
         """
@@ -478,7 +474,7 @@ class Junction(object):
             a = RBB_dict["avalanche"]
             mrb = RBB_dict["mrb"]
             if Vdiode <= 0.0 and Vrb != 0.0:
-                JRBB = Vdiode * self.Gsh * a * (1.0 - Vdiode / Vrb) ** (-mrb)
+                JRBB = Vdiode * self.Gsh * a * (1.0 + Vdiode / Vrb) ** (-mrb)
 
         elif method == "pvmismatch":
             JRBB = np.float64(0.0)
