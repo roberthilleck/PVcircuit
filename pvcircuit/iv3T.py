@@ -1,22 +1,17 @@
 # -*- coding: utf-8 -*-
 """
-This is the PVcircuit Package. 
+This is the PVcircuit Package.
     pvcircuit.IV3T()       # many forms of operational conditions of 3T tandems
 """
 
+import copy
 import math  # simple math
 import os
-from time import time
 
 import matplotlib as mpl
 import matplotlib.pyplot as plt  # plotting
 import numpy as np  # arrays
 import pandas as pd  # data frames
-# from scipy.special import lambertw, gammaincc, gamma   #special functions
-import scipy.constants as con  # physical constants
-from scipy.optimize import brentq  # root finder
-
-from pvcircuit.junction import *
 
 # conversion matrices
 SQ2 = math.sqrt(2.0)
@@ -186,17 +181,17 @@ class IV3T(object):
         """
         set variables
         """
-        for key, value in kwargs.items():            
+        for key, value in kwargs.items():
             if key in set(self.arraykeys):  # this should be numpy.ndarray
                 if np.isscalar(value):  # value = scalar
                     # shape = getattr(self, key).size
                     setattr(self, key, np.full(self.shape, value, dtype=np.float64))
                 else:  # value = full array
                     setattr(self, key, np.array(value))
-                
+
             # raise error if the key is not in the class attributes
             elif not key in list(self.__dict__.keys()):
-                raise ValueError(f"invalid class attribute {key}")            
+                raise ValueError(f"invalid class attribute {key}")
             else:
                 setattr(self, key, value)
 

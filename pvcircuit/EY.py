@@ -14,7 +14,7 @@ import numpy as np  # arrays
 import pandas as pd
 from parse import parse
 from scipy import constants
-from tqdm.autonotebook import tqdm, trange
+from tqdm import tqdm, trange
 
 import pvcircuit as pvc
 

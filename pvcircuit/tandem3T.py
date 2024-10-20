@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-This is the PVcircuit Package. 
+This is the PVcircuit Package.
     pvcircuit.Tandem3T()   # properties of a 3T tandem including 2 junctions
 """
 
@@ -29,7 +29,7 @@ class Tandem3T(object):
 
     update_now = True
 
-    def __init__(self, name="Tandem3T", TC:float=junction.TC_REF, Rz:float=1, Eg_list:List[float]=[1.8, 1.4], pn:List[float]=[-1, 1], Jext:float=0.014):
+    def __init__(self, name="Tandem3T", TC: float = junction.TC_REF, Rz: float = 1, Eg_list: List[float] = [1.8, 1.4], pn: List[float] = [-1, 1], Jext: float = 0.014):
         # user inputs
         # default s-type n-on-p
 
@@ -48,7 +48,6 @@ class Tandem3T(object):
         self.top = Junction(name="top", Eg=Eg_list[0], TC=TC, Jext=Jext, pn=pn[0], beta=0.0)
         self.bot = Junction(name="bot", Eg=Eg_list[1], TC=TC, Jext=Jext, pn=pn[1])
 
-
     def copy(self):
         """
         create a copy of a Tandem3T
@@ -66,9 +65,7 @@ class Tandem3T(object):
         # print(attr_list)
 
         strout = self.name + ": <pvcircuit.tandem3T.Tandem3T class>"
-        strout += "\nT = {0:.1f} C, Rz= {1:g} Ω cm2, Rt= {2:g} Ω cm2, Rr = {3:g} Ω cm2".format(
-            self.TC, self.Rz, self.top.Rser, self.bot.Rser
-        )
+        strout += "\nT = {0:.1f} C, Rz= {1:g} Ω cm2, Rt= {2:g} Ω cm2, Rr = {3:g} Ω cm2".format(self.TC, self.Rz, self.top.Rser, self.bot.Rser)
         strout += "\n\n" + str(self.top)
         strout += "\n\n" + str(self.bot)
         return strout
@@ -121,7 +118,7 @@ class Tandem3T(object):
                 junc.set(**jikwargs)
 
         # remaining Multi2T kwargs
-        for key, value in kwargs.items():                  
+        for key, value in kwargs.items():
             if key == "name":
                 self.__dict__[key] = str(value)
             # elif key == 'njunc':
@@ -132,8 +129,8 @@ class Tandem3T(object):
                 self.__dict__[key] = value
             elif key in ["Rz"]:
                 self.__dict__[key] = np.float64(value)
-             # raise error if the key is not in the class attributes
-            elif not key in list(self.__dict__.keys()):
+            # raise error if the key is not in the class attributes
+            elif key not in list(self.__dict__.keys()):
                 raise ValueError(f"invalid class attribute {key}")
 
     @property
@@ -236,6 +233,9 @@ class Tandem3T(object):
         calcuate (Jro,Jzo,Jto) mapped -> iv3T.(Iro,Izo,Ito)
         from ABSOLUTE (Vz,Vr,Vt) mapped <- iv3T.(Vzt,Vrz,Vtr)
         input class tandem.IV3T object 'iv3T'
+        Operates on absolute voltages, directly using the actual voltages Vz, Vr, and Vt to calculate the currents.
+        Calculates the currents directly by applying the voltage directly into the junction models.
+
         """
 
         top = self.top  # top Junction
@@ -354,6 +354,10 @@ class Tandem3T(object):
         calcuate (Jro,Jzo,Jto) mapped -> iv3T.(Iro,Izo,Ito)
         from RELATIVE iv3T.(Vzt,Vrz,Vtr) ignoring Vtr
         input class tandem.IV3T object 'iv3T'
+
+        operates on relative voltages, taking the input voltages Vzt and Vrz, and calculates currents while ignoring Vtr.
+        Iteratively adjusts these voltages using resistance models to calculate the current densities. Uses iterative method to find the
+        correct value of Vz that satisfies Kirchhoff’s current law across the junctions, adjusting the voltage drop for the z-terminal and checking if the current balances (via _dI function).
         """
 
         top = self.top  # top Junction
@@ -600,7 +604,7 @@ class Tandem3T(object):
         if lnout.shape[0] > 0:
             MPP = lnout.MPP(name)  # single MPP point in IV3T space
         else:
-            return lnout, IV3T(name = "bogus", meastype=meastype, shape=1, area=self.lightarea)
+            return lnout, IV3T(name="bogus", meastype=meastype, shape=1, area=self.lightarea)
 
         # TODO needs externalization in PlottingWithControls
         # plot if possible
@@ -633,6 +637,8 @@ class Tandem3T(object):
         Isc3 = self.Isc3(meastype)
         Isct = Isc3.Ito[0]
         Iscr = Isc3.Iro[0]
+        if any(np.isnan([Isct, Iscr])):
+            VorI = "V"
         pnt = self.top.pn
         pnr = self.bot.pn
         tol = 1e-5
@@ -696,7 +702,7 @@ class Tandem3T(object):
             if (Pmpr - Pmpo) / Pmpr < tol:
                 break
             Pmpo = Pmpr
-            VorI = "I"  # switch to 'I' after first iteration
+            # VorI = "I"  # switch to 'I' after first iteration
 
         # create one line solution
         pt = IV3T(name="MPP", meastype=meastype, shape=1, area=self.lightarea)

@@ -335,7 +335,7 @@ class Junction(object):
                 self.__dict__[key] = np.float64(value)
 
             # raise error if the key is not in the class attributes
-            elif not key in list(self.__dict__.keys()):
+            elif key not in list(self.__dict__.keys()):
                 raise ValueError(f"invalid class attribute {key}")
                 # with self.debugout:
                 #     print("ATTR", key, value)
@@ -479,6 +479,9 @@ class Junction(object):
         elif method == "pvmismatch":
             JRBB = np.float64(0.0)
 
+        # else:
+        #     JRBB = self.J0.sum()
+
         return Vdiode * self.Gsh + JRBB
 
     def Jparallel(self, Vdiode: float, Jtot: float) -> float:
@@ -506,7 +509,10 @@ class Junction(object):
         if self.notdiode():  # sum(J0)=0 -> no diode
             return 0.0
 
+        # Jtot = max(self.Jphoto + Jdiode, 0)
         Jtot = self.Jphoto + Jdiode
+        # if self.RBB_dict["method"] is None:
+        #     Jtot = max(Jtot, -1 * self.J0.sum())
 
         try:
             Vdiode = brentq(
