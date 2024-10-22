@@ -1,34 +1,43 @@
-import os
+from pathlib import Path
 
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import pytest
 
+import pvcircuit as pvc
 from pvcircuit import EQE
 
 
+def get_measured_eqe():
+    path = Path(pvc.datapath)
+    eqe_file = "MM927Bn5CEQE.csv"
+    data = pd.read_csv(path.joinpath(eqe_file), index_col=0)
+    eqe = pvc.EQE(data, data.index, "TestEQE")
+    return eqe
+
 @pytest.fixture
-def eqe():
-    return EQE(np.array([1,1]),np.array([1,2]))
+def ideal_eqe():
+
+    return EQE(np.array([1, 1]), np.array([1, 2]))
+
+@pytest.fixture
+def example_eqe():
+
+    path = Path(pvc.datapath)
+    eqe_file = "MM927Bn5CEQE.csv"
+    data = pd.read_csv(path.joinpath(eqe_file), index_col=0)
+    eqe = pvc.EQE(data, data.index, "TestEQE")
+    return eqe
 
 
-
-def test_eqe(eqe):
-    
+def test_eqe(ideal_eqe):
     assert 1 == 1
-# def test_Multi2T(multi2T):
-
-#     with open(os.path.join("tests", "Multi2T.txt"), "r", encoding="utf8") as fid:
-#         multi2T_in = [line.rstrip().strip() for line in fid]
-
-#     for i, r in enumerate(multi2T_in):
-#         multi2T_out = multi2T.__str__().split("\n")[i].strip()
-#         assert multi2T_out in multi2T_in
-#         # if multi2T_out not in multi2T_in:
-#         #     print(multi2T_in)
-
-
 
 
 if __name__ == "__main__":
-    test_eqe(EQE(np.array([1,1]),np.array([1,2])))
+
+    eqe = get_measured_eqe()
+
+    eqe.plot()
+    plt.show()

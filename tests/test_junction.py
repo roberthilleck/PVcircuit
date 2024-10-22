@@ -1,4 +1,5 @@
 import os
+from pathlib import Path
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -112,13 +113,15 @@ def junction():
 
 def test_junction_str(junction):
 
-    with open(os.path.join("tests", "Junction.txt"), "r", encoding="utf8") as fid:
-        junction_in = [line.rstrip().strip() for line in fid]
+    test_file = "Junction.txt"
+    # write test case
+    # with open(Path().cwd().joinpath("tests","test_files","test_files", test_file), "w", encoding="utf8") as fout:
+    #     fout.write(junction.__str__())
 
-    for i, r in enumerate(junction_in):
-        junction_out = junction.__str__().split("\n")[i].strip()
-        assert junction_out in junction_in
+    with open(Path().cwd().joinpath("tests","test_files", test_file), "r", encoding="utf8") as fin:
+        test_str = fin.read()
 
+    np.testing.assert_string_equal(test_str, junction.__str__())
 
 def test_junction_setter(junction):
     """
@@ -228,7 +231,7 @@ def test_Vdiode(junction):
 
     np.testing.assert_almost_equal(junction.Vdiode(0), 0.7849550554937345)
     np.testing.assert_almost_equal(junction.Vdiode(-40e-3), 0, decimal=5)
-    np.testing.assert_equal(junction.Vdiode(-41e-3), np.nan)
+    np.testing.assert_equal(junction.Vdiode(-41e-3), np.nan) #VLIM_REVERSE
 
     junction.set(RBB="bishop", Gsh=1e-4)
     np.testing.assert_almost_equal(junction.Vdiode(-41e-3), -9.652384228088378)
